@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="{{ cfg.language }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>{{ cfg.title }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='status.css') }}?v={{ version }}">
+<noscript><meta http-equiv="refresh" content="{{ cfg.refresh_interval }}"></noscript>
+</head>
+<body data-refresh="{{ cfg.refresh_interval }}" data-fragment-url="{{ fragment_url }}" data-days="{{ S.days }}">
+<header class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 28 20" aria-hidden="true">
+      <rect x="1" y="1" width="26" height="18" rx="3" fill="none" stroke="#e9ece4" stroke-width="1.6"/>
+      <rect x="6" y="9" width="3.4" height="6" rx="1" fill="#5cc48d"/>
+      <rect x="12.3" y="6.5" width="3.4" height="8.5" rx="1" fill="#efb440"/>
+      <rect x="18.6" y="4.5" width="3.4" height="10.5" rx="1" fill="#ec5f53"/>
+    </svg>
+    <span class="brand-name">{{ cfg.title }}</span>
+    <span id="conn" class="conn" hidden>{{ S.connection_lost }}</span>
+  </div>
+  <div class="clock"><span id="date" class="date"></span><span id="clock" class="time">--:--</span></div>
+</header>
+<main id="dash">
+{% include "_dashboard.html" %}
+</main>
+<script src="{{ url_for('static', filename='status.js') }}?v={{ version }}"></script>
+</body>
+</html>

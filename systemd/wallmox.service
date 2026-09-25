@@ -1,0 +1,18 @@
+[Unit]
+Description=Wallmox status dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wallmox
+Group=wallmox
+WorkingDirectory=/opt/wallmox
+Environment=WALLMOX_CONFIG=/etc/wallmox/config.toml
+ExecStart=/opt/wallmox/venv/bin/python -m wallmox
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
