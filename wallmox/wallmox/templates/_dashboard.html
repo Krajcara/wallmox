@@ -1,0 +1,77 @@
+{% from "_macros.html" import gauge, spark %}
+{% if view.banner %}
+<div class="banner banner-{{ view.banner.level }}">
+  <strong>{{ view.banner.title }}</strong>
+  {% if view.banner.detail %}<span>{{ view.banner.detail }}</span>{% endif %}
+  {% if view.banner.error %}<span class="banner-error">{{ view.banner.error }}</span>{% endif %}
+</div>
+{% endif %}
+<div class="nodes nodes-{{ view.nodes|length if view.nodes|length < 3 else 'many' }}{% if view.stale %} is-stale{% endif %}">
+{% for n in view.nodes %}
+  <section class="node node-{{ n.level }}{% if not n.online %} node-down{% endif %}">
+    <header class="node-head">
+      <span class="dot dot-{{ n.level }}"></span>
+      <h2 class="node-name">{{ n.name }}</h2>
+      {% if n.online %}
+      <span class="node-meta">{{ S.up }} {{ n.uptime }}</span>
+      <span class="node-meta">{{ n.cores }} {{ S.cores }}</span>
+      {% if n.load %}<span class="node-meta node-load">{{ S.load }} {{ n.load }}</span>{% endif %}
+      {% endif %}
+    </header>
+
+    {% if not n.online %}
+    <p class="node-offline">{{ S.offline }}</p>
+    {% else %}
+    {% if n.error %}<p class="node-error">{{ n.error }}</p>{% endif %}
+    <div class="node-body">
+      <div class="gauges">
+        <div class="gauge-box">{{ gauge(n.cpu_gauge) }}<div class="gauge-sub">{{ n.cpu_model or '&nbsp;'|safe }}</div></div>
+        <div class="gauge-box">{{ gauge(n.mem_gauge) }}<div class="gauge-sub">{{ n.mem_text }}</div></div>
+      </div>
+
+      <div class="details">
+        {% if n.spark %}
+        <div class="trend trend-{{ n.cpu_gauge.level }}">
+          <div class="row-label"><span>{{ S.cpu }}</span><span class="muted">{{ n.spark_label }}</span></div>
+          {{ spark(n.spark) }}
+        </div>
+        {% endif %}
+
+        {% if n.show_storage %}
+        <div class="storage">
+          {% for s in n.storage %}
+          <div class="st st-{{ s.level }}">
+            <div class="row-label">
+              <span class="st-name">{{ s.name }}</span>
+              <span class="st-num"><b>{{ s.pct|round|int }}%</b> <span class="muted">{{ s.text }}</span></span>
+            </div>
+            <div class="bar"><div class="bar-fill" style="width: {{ s.width }}%"></div></div>
+          </div>
+          {% else %}
+          <p class="muted">{{ S.no_storage }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if n.show_guests %}
+    <div class="guests">
+      <div class="row-label">
+        <span>{{ S.guests }}</span>
+        <span class="muted">{{ n.guests_running }} {{ S.running }}, {{ n.guests_stopped }} {{ S.stopped }}</span>
+      </div>
+      <ul class="chips">
+        {% for g in n.guest_chips %}
+        <li class="chip{% if not g.running %} chip-off{% endif %}"><span class="chip-dot"></span>{{ g.name }}<span class="chip-id">{{ g.vmid }}</span></li>
+        {% else %}
+        <li class="muted">{{ S.no_guests }}</li>
+        {% endfor %}
+        {% if n.guests_hidden %}<li class="chip chip-more">{{ S.more.format(n=n.guests_hidden) }}</li>{% endif %}
+      </ul>
+    </div>
+    {% endif %}
+    {% endif %}
+  </section>
+{% endfor %}
+</div>
