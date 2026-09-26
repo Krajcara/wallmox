@@ -180,8 +180,8 @@ def build_view(state: dict, cfg, S: dict) -> dict:
         node["disks"] = [{
             "name": d["name"], "model": d.get("model", ""),
             "temp": int(round(d["temp"])),
-            "level": level(d["temp"], th["disk_temp"]),
-        } for d in (temps or {}).get("disks", [])]
+            "level": level(d["temp"], th["sata_temp" if d.get("kind") == "sata" else "disk_temp"]),
+        } for d in (temps or {}).get("disks", []) if disp.show_disk_temps]
         node["mem_text"] = f"{fmt_bytes(n['mem_used'])} {S['of']} {fmt_bytes(n['mem_total'])}"
 
         node["storage"] = [{

@@ -71,12 +71,30 @@ WALLMOX_AGENT_KEY=... bash -c "$(curl -fsSL https://raw.githubusercontent.com/kr
 The agent is one Python file using only the standard library. It reads the
 kernel's sensors (no lm-sensors needed), runs as an unprivileged user, answers
 only requests with the key and cannot change anything. It reports the CPU
-temperature and NVMe drives; SATA drives only show up when the kernel's
-`drivetemp` module is loaded. Run the same command again to update the agent;
+temperature, NVMe drives and SATA drives. For SATA drives the install command
+loads the kernel's `drivetemp` module. If your hard disks spin down to save
+power, reading their temperature may keep some of them awake; put
+`WALLMOX_AGENT_DRIVETEMP=0` in front of the command to skip SATA drives. Run the same command again to update the agent;
 add `WALLMOX_AGENT_UNINSTALL=1` in front to remove it.
 
 When a node joins the cluster, run the command there as well. Wallmox finds
 the node's address through Proxmox.
+
+### Night mode
+
+In the admin panel, section **Night mode**, set when the tablet should dim or
+turn off. The tablet's own clock decides, so the night may cross midnight.
+
+- **Darken the page** works in any browser. The backlight stays on, and a tap
+  lights the screen up for a minute.
+- **Control the backlight** is for Linux kiosk tablets. A small helper on the
+  tablet really dims or switches off the backlight. Install it with the command
+  shown in the admin panel (run it on the tablet):
+
+  ```bash
+  sudo apt install -y curl
+  sudo WALLMOX_URL=https://wallmox.example.com bash -c "$(curl -fsSL https://raw.githubusercontent.com/krajcara/wallmox/main/tablet/install.sh)"
+  ```
 
 ## Try it without Proxmox
 

@@ -140,6 +140,18 @@ def create_app(cfg, start_poller: bool = True) -> Flask:
         return jsonify({"version": __version__, "snapshot": st["snapshot"],
                         "error": st["error"], "last_ok": st["last_ok"]})
 
+    @app.route("/api/night")
+    def api_night():
+        """Night mode schedule for the tablet's screen helper."""
+        check_key()
+        nm = cfg.night
+        data = {"enabled": nm.enabled, "start": nm.start, "end": nm.end, "mode": nm.mode,
+                "night_level": nm.dim_level, "day_level": nm.day_level, "method": nm.method}
+        if request.args.get("format") == "env":
+            lines = [f"{k.upper()}={int(v) if isinstance(v, bool) else v}" for k, v in data.items()]
+            return app.response_class("\n".join(lines) + "\n", mimetype="text/plain")
+        return jsonify(data)
+
     @app.route("/healthz")
     def healthz():
         st = poller.state()

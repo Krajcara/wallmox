@@ -228,3 +228,11 @@ body { display: -webkit-flex; display: flex; -webkit-flex-direction: column; fle
 @media (prefers-reduced-motion: no-preference) {
   .g-fill { -webkit-transition: stroke-dasharray 0.6s ease; transition: stroke-dasharray 0.6s ease; }
 }
+
+/* Night mode: a black layer over the page (any browser) */
+.night {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: #000; opacity: 0; z-index: 100;
+  -webkit-transition: opacity 1.5s ease; transition: opacity 1.5s ease;
+}
+.night.is-on { display: block; }

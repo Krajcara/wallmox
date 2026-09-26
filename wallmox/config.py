@@ -51,8 +51,21 @@ class Display:
     show_stopped_guests: bool = True
     show_cpu_model: bool = True
     show_temps: bool = True
+    show_disk_temps: bool = True
     hidden_nodes: list = field(default_factory=list)
     hidden_storages: list = field(default_factory=list)
+
+
+@dataclass
+class Night:
+    enabled: bool = False
+    start: str = "22:00"          # tablet's local time
+    end: str = "07:00"
+    mode: str = "dim"             # "dim" or "off"
+    dim_level: int = 20           # screen brightness at night, percent
+    day_level: int = 100          # backlight brightness by day (screen helper only)
+    method: str = "overlay"       # "overlay" (any browser) or "backlight" (Linux helper)
+    tap_wake: bool = True         # a tap lights the screen up for a minute
 
 
 def _default_thresholds() -> dict:
@@ -61,7 +74,8 @@ def _default_thresholds() -> dict:
         "mem": Threshold(80, 92),
         "storage": Threshold(80, 90),
         "cpu_temp": Threshold(70, 85),    # degrees Celsius
-        "disk_temp": Threshold(55, 65),
+        "disk_temp": Threshold(55, 65),   # NVMe
+        "sata_temp": Threshold(45, 55),   # SATA SSDs and hard disks
     }
 
 
@@ -83,6 +97,7 @@ class Config:
     proxmox: ProxmoxConfig = field(default_factory=ProxmoxConfig)
     thresholds: dict = field(default_factory=_default_thresholds)
     display: Display = field(default_factory=Display)
+    night: Night = field(default_factory=Night)
     # security, kept only in settings.json
     admin_password_hash: str = ""
     secret_key: str = ""
@@ -141,6 +156,10 @@ def _apply(cfg: Config, raw: dict) -> None:
         if hasattr(cfg.display, key):
             setattr(cfg.display, key, value)
 
+    for key, value in (raw.get("night") or {}).items():
+        if hasattr(cfg.night, key):
+            setattr(cfg.night, key, value)
+
 
 def normalize(cfg: Config) -> None:
     cfg.poll_interval = max(2, int(cfg.poll_interval))
@@ -197,6 +216,7 @@ def save_settings(cfg: Config) -> None:
     data["proxmox"] = {key: getattr(cfg.proxmox, key) for key in EDITABLE_PROXMOX}
     data["thresholds"] = {name: asdict(th) for name, th in cfg.thresholds.items()}
     data["display"] = asdict(cfg.display)
+    data["night"] = asdict(cfg.night)
     data["admin_password_hash"] = cfg.admin_password_hash
     data["secret_key"] = cfg.secret_key
 

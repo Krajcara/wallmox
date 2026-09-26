@@ -89,3 +89,8 @@
   </section>
 {% endfor %}
 </div>
+{% set nm = cfg.night %}
+<div id="night-config" hidden
+     data-enabled="{{ '1' if nm.enabled and nm.method == 'overlay' else '0' }}"
+     data-start="{{ nm.start }}" data-end="{{ nm.end }}" data-mode="{{ nm.mode }}"
+     data-level="{{ nm.dim_level }}" data-tap="{{ '1' if nm.tap_wake else '0' }}"></div>

@@ -22,7 +22,8 @@ class DemoSource:
                         (104, "pihole", "lxc", True), (105, "wallmox", "lxc", True),
                         (110, "win11-lab", "vm", False), (111, "kali", "vm", False)]},
             {"name": "pve2", "cores": 4, "temp_base": 36,
-             "disks": [("nvme0", "Crucial P3 500GB", 39)], "model": "Intel N100", "mem": 16 * GiB,
+             "disks": [("nvme0", "Crucial P3 500GB", 39), ("sda", "WDC WD40EFRX-68N", 36),
+                       ("sdb", "WDC WD40EFRX-68N", 37)], "model": "Intel N100", "mem": 16 * GiB,
              "base_cpu": 9, "base_mem": 0.47, "uptime": 12 * 86400 + 19 * 3600,
              "storage": [("local", "dir", 58, 0.33), ("local-lvm", "lvmthin", 400, 0.52),
                          ("backup-nfs", "nfs", 7400, 0.71)],
@@ -52,7 +53,8 @@ class DemoSource:
                 "temp_error": None,
                 "temps": {
                     "cpu": round(n["temp_base"] + cpu * 0.38 + self.rng.uniform(-0.8, 0.8), 1),
-                    "disks": [{"name": d, "model": m, "temp": round(base + math.sin(t / 60.0 + i) * 1.5, 1)}
+                    "disks": [{"name": d, "model": m, "temp": round(base + math.sin(t / 60.0 + i) * 1.5, 1),
+                               "kind": "nvme" if d.startswith("nvme") else "sata"}
                               for d, m, base in n["disks"]],
                     "version": "demo",
                 },

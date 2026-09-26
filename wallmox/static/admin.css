@@ -36,6 +36,7 @@ a { color: var(--ink); }
 h1, h2, h3 { margin: 0; font-weight: 600; line-height: 1.15; }
 .muted { color: var(--muted); }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+[hidden] { display: none !important; }
 
 /* Buttons */
 .btn {
@@ -218,3 +219,9 @@ input[readonly] { color: var(--muted); }
 .notes-body { white-space: pre-wrap; background: var(--face); border-radius: var(--radius); padding: 0.8rem; font-size: 0.95rem; max-height: 16rem; overflow: auto; }
 .upd-log { max-height: 14rem; overflow: auto; margin: 0 0 1rem; }
 .actions form { margin: 0; }
+
+.hint-tight { margin: -0.6rem 0 1rem; }
+input[type=time] {
+  width: 100%; font: inherit; font-size: 1rem; color: var(--ink); color-scheme: dark;
+  background: var(--face); border: 1px solid var(--track); border-radius: var(--radius); padding: 0.5rem 0.7rem;
+}

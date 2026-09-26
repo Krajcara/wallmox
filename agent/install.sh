@@ -4,6 +4,10 @@
 # The admin panel shows this command with your key filled in:
 #   WALLMOX_AGENT_KEY=... bash -c "$(curl -fsSL https://raw.githubusercontent.com/krajcara/wallmox/main/agent/install.sh)"
 #
+# SATA drives: the kernel module "drivetemp" is loaded (and kept loaded after a
+# reboot) so SATA drive temperatures show up. WALLMOX_AGENT_DRIVETEMP=0 skips it,
+# e.g. if your hard disks spin down and should not be woken up.
+#
 # Optional: WALLMOX_AGENT_PORT (default 9105), WALLMOX_AGENT_ALLOW (IP of the
 # Wallmox container; adds a Proxmox firewall rule for it when the firewall is on),
 # WALLMOX_AGENT_UNINSTALL=1 to remove the agent.
@@ -31,6 +35,7 @@ if [[ "${WALLMOX_AGENT_UNINSTALL:-0}" == "1" ]]; then
   systemctl disable --now wallmox-agent >/dev/null 2>&1 || true
   rm -f "$UNIT"; systemctl daemon-reload
   rm -rf "$DIR" "$CONF_DIR"
+  rm -f /etc/modules-load.d/wallmox-drivetemp.conf
   userdel "$USER_NAME" >/dev/null 2>&1 || true
   ok "Wallmox agent removed."
   exit 0
@@ -50,6 +55,18 @@ PORT="${PORT:-9105}"
 [[ "$PORT" =~ ^[0-9]+$ ]] || die "WALLMOX_AGENT_PORT must be a number."
 
 echo "${C_B}Wallmox agent${C_0}"
+
+# SATA drive temperatures come from the kernel's drivetemp module
+if [[ "${WALLMOX_AGENT_DRIVETEMP:-1}" == "1" ]]; then
+  if modprobe drivetemp 2>/dev/null; then
+    echo drivetemp > /etc/modules-load.d/wallmox-drivetemp.conf
+    ok "drivetemp module loaded (SATA drive temperatures)"
+  else
+    printf '  ! drivetemp module not available, SATA drives will not show temperatures\n'
+  fi
+else
+  rm -f /etc/modules-load.d/wallmox-drivetemp.conf
+fi
 
 id "$USER_NAME" >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin "$USER_NAME"
 

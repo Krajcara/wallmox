@@ -93,6 +93,16 @@
     }
   }
 
+  // Night mode: show only the options of the chosen method.
+  const method = document.getElementById("night-method");
+  if (method) {
+    const sync = () => document.querySelectorAll("[data-show-for]").forEach((el) => {
+      el.hidden = el.dataset.showFor !== method.value;
+    });
+    method.addEventListener("change", sync);
+    sync();
+  }
+
   // Copy buttons.
   document.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.addEventListener("click", async () => {

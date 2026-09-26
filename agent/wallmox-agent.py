@@ -20,7 +20,7 @@ import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "0.3.0"
+VERSION = "0.5.0"
 CONF_FILE = "/etc/wallmox-agent/agent.conf"
 SYS = os.environ.get("WALLMOX_AGENT_SYSFS", "/sys")   # overridable for tests
 
@@ -118,7 +118,8 @@ def disk_temps(sensors):
         if name in disks and s["label"].lower() != "composite":
             continue
         disks[name] = {"name": name, "model": model, "temp": s["temp"],
-                       "max": s["max"], "crit": s["crit"]}
+                       "max": s["max"], "crit": s["crit"],
+                       "kind": "nvme" if s["driver"] == "nvme" else "sata"}
     return sorted(disks.values(), key=lambda d: d["name"])
 
 

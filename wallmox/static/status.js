@@ -18,9 +18,66 @@
 
   function tickClock() {
     var d = new Date();
+    if (typeof applyNight === 'function') { applyNight(); }
     clockEl.innerHTML = pad(d.getHours()) + ':' + pad(d.getMinutes());
     dateEl.innerHTML = days[d.getDay()] + ' ' + pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.';
   }
+
+  /* Night mode, evaluated with the tablet's own clock. */
+  var nightEl = document.getElementById('night');
+  var wakeUntil = 0;
+
+  function toMinutes(t) {
+    var p = (t || '').split(':');
+    return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+  }
+
+  function nightConfig() {
+    var el = document.getElementById('night-config');
+    if (!el) { return { enabled: false }; }
+    return {
+      enabled: el.getAttribute('data-enabled') === '1',
+      start: toMinutes(el.getAttribute('data-start')),
+      end: toMinutes(el.getAttribute('data-end')),
+      mode: el.getAttribute('data-mode'),
+      level: parseInt(el.getAttribute('data-level'), 10) || 20,
+      tap: el.getAttribute('data-tap') === '1'
+    };
+  }
+
+  function isNight(cfg) {
+    if (!cfg.enabled || isNaN(cfg.start) || isNaN(cfg.end) || cfg.start === cfg.end) { return false; }
+    var d = new Date();
+    var now = d.getHours() * 60 + d.getMinutes();
+    return cfg.start < cfg.end ? (now >= cfg.start && now < cfg.end)
+                               : (now >= cfg.start || now < cfg.end);
+  }
+
+  function applyNight() {
+    var cfg = nightConfig();
+    if (!isNight(cfg) || new Date().getTime() < wakeUntil) {
+      nightEl.className = 'night';
+      nightEl.style.opacity = '0';
+      return;
+    }
+    var opacity = cfg.mode === 'off' ? 1 : Math.max(0, Math.min(0.95, 1 - cfg.level / 100));
+    if (nightEl.className !== 'night is-on') {
+      nightEl.className = 'night is-on';
+      setTimeout(function () { nightEl.style.opacity = String(opacity); }, 30);
+    } else {
+      nightEl.style.opacity = String(opacity);
+    }
+  }
+
+  function wake() {
+    var cfg = nightConfig();
+    if (cfg.tap && isNight(cfg)) {
+      wakeUntil = new Date().getTime() + 60 * 1000;
+      applyNight();
+    }
+  }
+  nightEl.addEventListener('click', wake, false);
+  nightEl.addEventListener('touchstart', wake, false);
 
   function setConnected(ok) {
     conn.className = ok ? 'conn is-hidden' : 'conn';
@@ -38,6 +95,7 @@
       clearTimeout(guard);
       if (xhr.status === 200) {
         dash.innerHTML = xhr.responseText;
+        applyNight();
         failures = 0;
         setConnected(true);
       } else {

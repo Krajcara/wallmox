@@ -22,6 +22,7 @@
     <a href="#general">{{ S.sec_general }}</a>
     <a href="#display">{{ S.sec_display }}</a>
     <a href="#temps">{{ S.sec_temps }}</a>
+    <a href="#night">{{ S.sec_night }}</a>
     <a href="#thresholds">{{ S.sec_thresholds }}</a>
     <a href="#proxmox">{{ S.sec_proxmox }}</a>
     <a href="#security">{{ S.sec_security }}</a>
@@ -108,7 +109,10 @@
       <h2>{{ S.sec_temps }}</h2>
       <form method="post" action="{{ url_for('admin.save', section='temps') }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
-        <div class="toggles">{{ toggle("show_temps", S.d_temps, cfg.display.show_temps) }}</div>
+        <div class="toggles">
+          {{ toggle("show_temps", S.d_temps, cfg.display.show_temps) }}
+          {{ toggle("show_disk_temps", S.d_disk_temps, cfg.display.show_disk_temps) }}
+        </div>
 
         <p>{{ S.temps_intro }}</p>
         <div class="copy copy-cmd">
@@ -116,6 +120,7 @@
           <button class="btn" type="button" data-copy="agent-cmd" data-done="{{ S.copied }}">{{ S.copy_btn }}</button>
         </div>
         <p class="field-hint">{{ S.temps_after }}</p>
+        <p class="field-hint">{{ S.sata_note }}</p>
 
         {% if agents %}
         <table class="agents">
@@ -150,6 +155,49 @@
       </form>
     </section>
 
+    <section class="panel" id="night">
+      <h2>{{ S.sec_night }}</h2>
+      {% set nm = cfg.night %}
+      <form method="post" action="{{ url_for('admin.save', section='night') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="toggles">{{ toggle("enabled", S.n_enabled, nm.enabled) }}</div>
+        <div class="grid-2">
+          {{ field("start", S.n_from, nm.start, "time", attrs='required') }}
+          {{ field("end", S.n_to, nm.end, "time", attrs='required') }}
+        </div>
+        <p class="field-hint hint-tight">{{ S.n_times_hint }}</p>
+        <div class="grid-2">
+          <label class="field">
+            <span class="field-label">{{ S.n_mode }}</span>
+            <select name="mode">
+              <option value="dim" {% if nm.mode == 'dim' %}selected{% endif %}>{{ S.n_mode_dim }}</option>
+              <option value="off" {% if nm.mode == 'off' %}selected{% endif %}>{{ S.n_mode_off }}</option>
+            </select>
+          </label>
+          {{ field("dim_level", S.n_level, nm.dim_level, "number", attrs='min="1" max="90"') }}
+        </div>
+        <label class="field">
+          <span class="field-label">{{ S.n_method }}</span>
+          <select name="method" id="night-method">
+            <option value="overlay" {% if nm.method == 'overlay' %}selected{% endif %}>{{ S.n_method_overlay }}</option>
+            <option value="backlight" {% if nm.method == 'backlight' %}selected{% endif %}>{{ S.n_method_backlight }}</option>
+          </select>
+          <small class="field-hint">{{ S.n_method_hint }}</small>
+        </label>
+        <div data-show-for="overlay" class="toggles">{{ toggle("tap_wake", S.n_tap, nm.tap_wake) }}</div>
+        <div data-show-for="backlight">
+          <div class="grid-2 grid-port">{{ field("day_level", S.n_day_level, nm.day_level, "number", attrs='min="10" max="100"') }}</div>
+          <p>{{ S.n_helper_intro }}</p>
+          <div class="copy copy-cmd">
+            <pre class="cmd" id="screen-cmd">{{ screen_cmd }}</pre>
+            <button class="btn" type="button" data-copy="screen-cmd" data-done="{{ S.copied }}">{{ S.copy_btn }}</button>
+          </div>
+          <p class="field-hint">{{ S.n_helper_after }}</p>
+        </div>
+        <div class="actions"><button class="btn btn-primary" type="submit">{{ S.save }}</button></div>
+      </form>
+    </section>
+
     <section class="panel" id="thresholds">
       <h2>{{ S.sec_thresholds }}</h2>
       <form method="post" action="{{ url_for('admin.save', section='thresholds') }}">
@@ -158,7 +206,8 @@
           <thead><tr><th></th><th><span class="swatch swatch-warn"></span>{{ S.th_warn }}</th><th><span class="swatch swatch-crit"></span>{{ S.th_crit }}</th></tr></thead>
           <tbody>
           {% for name, label, top in (("cpu", S.th_cpu_pct, 100), ("mem", S.th_mem_pct, 100), ("storage", S.th_storage_pct, 100),
-                                      ("cpu_temp", S.th_cpu_temp, 120), ("disk_temp", S.th_disk_temp, 120)) %}
+                                      ("cpu_temp", S.th_cpu_temp, 120), ("disk_temp", S.th_nvme_temp, 120),
+                                      ("sata_temp", S.th_sata_temp, 120)) %}
             {% set th = cfg.thresholds[name] %}
             <tr>
               <th scope="row">{{ label }}</th>

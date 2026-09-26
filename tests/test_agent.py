@@ -52,7 +52,8 @@ def test_snapshot(sysfs):
     snap = agent.snapshot()
     assert snap["cpu"] == 58.0                       # hottest package
     assert snap["disks"] == [{"name": "nvme0", "model": "Samsung SSD 980 PRO 1TB",
-                              "temp": round(41.85, 1), "max": None, "crit": round(84.85, 1)}]
+                              "temp": round(41.85, 1), "max": None, "crit": round(84.85, 1),
+                              "kind": "nvme"}]
     assert all(s["driver"] != "acpitz" for s in snap["sensors"])
 
 
@@ -87,3 +88,16 @@ def test_http_requires_key(sysfs):
         assert data["cpu"] == 58.0
     finally:
         server.shutdown()
+
+
+def test_sata_drive_via_drivetemp(tmp_path):
+    root = tmp_path / "sys"
+    scsi = root / "devices/pci0000:00/ata1/host0/target0:0:0/0:0:0:0"
+    w(scsi / "model", "WDC WD40EFRX-68N\n")
+    (scsi / "block" / "sda").mkdir(parents=True)
+    hw = root / "class/hwmon/hwmon3"
+    w(hw / "name", "drivetemp\n"); w(hw / "temp1_input", "38000\n")
+    os.symlink(scsi, hw / "device")
+    disks = load_agent(root).snapshot()["disks"]
+    assert disks == [{"name": "sda", "model": "WDC WD40EFRX-68N", "temp": 38.0,
+                      "max": None, "crit": None, "kind": "sata"}]

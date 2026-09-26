@@ -190,3 +190,29 @@ def test_parse_version():
     assert parse_version("v0.10.0") > parse_version("0.9.9")
     assert parse_version("v1.0") == (1, 0, 0)
     assert parse_version("0.4.0-dev") == (0, 4, 0)
+
+
+def test_night_mode(env):
+    app, cfg, _ = env
+    c = app.test_client()
+    login(c)
+    token = csrf(c, "/admin/")
+    base = {"csrf": token, "enabled": "on", "start": "23:15", "end": "06:30", "mode": "off",
+            "method": "backlight", "dim_level": "15", "day_level": "80", "tap_wake": "on"}
+    c.post("/admin/save/night", data=base)
+    nm = cfg.night
+    assert (nm.enabled, nm.start, nm.end, nm.mode, nm.method, nm.dim_level, nm.day_level) == \
+        (True, "23:15", "06:30", "off", "backlight", 15, 80)
+
+    r = c.post("/admin/save/night", data=dict(base, start="25:00"), follow_redirects=True)
+    assert "HH:MM" in r.get_data(as_text=True) and nm.start == "23:15"
+
+    env_text = c.get("/api/night?format=env").get_data(as_text=True)
+    assert "ENABLED=1" in env_text and "START=23:15" in env_text and "METHOD=backlight" in env_text
+    assert c.get("/api/night").get_json()["night_level"] == 15
+
+    # the page overlay is only used with the "overlay" method
+    frag = c.get("/status/fragment").get_data(as_text=True)
+    assert 'id="night-config"' in frag and 'data-enabled="0"' in frag
+    c.post("/admin/save/night", data=dict(base, method="overlay"))
+    assert 'data-enabled="1"' in c.get("/status/fragment").get_data(as_text=True)

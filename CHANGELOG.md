@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0
+
+- SATA drive temperatures. The agent installer loads the kernel's `drivetemp`
+  module (kept after reboots), so SATA SSDs and hard disks show up next to NVMe
+  drives. `WALLMOX_AGENT_DRIVETEMP=0` skips it for disks that should spin down.
+- Separate warning levels for NVMe and SATA drives, and a switch to hide disk
+  temperatures.
+- Night mode, set in the admin panel: from/to time (by the tablet's clock),
+  dim or turn off, night brightness.
+  - "Darken the page" works in any browser, a tap wakes the screen for a minute.
+  - "Control the backlight" uses a small helper on Linux kiosk tablets
+    (`tablet/`), which really dims or switches off the backlight. The admin
+    panel shows the install command.
+- `/api/night` gives the schedule to the helper.
+
 ## 0.4.1
 
 - `update` and the installer accept release tags written as `V1.2.3` as well as `v1.2.3`.

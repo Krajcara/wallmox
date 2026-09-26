@@ -106,6 +106,16 @@ def known_names():
 
 
 AGENT_INSTALL_URL = "https://raw.githubusercontent.com/krajcara/wallmox/main/agent/install.sh"
+SCREEN_INSTALL_URL = "https://raw.githubusercontent.com/krajcara/wallmox/main/tablet/install.sh"
+TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def screen_command(c) -> str:
+    env = [f"WALLMOX_URL={request.url_root.rstrip('/')}"]
+    if c.status_key:
+        env.append(f"WALLMOX_KEY={c.status_key}")
+    return ("sudo apt install -y curl\n"
+            f"sudo {' '.join(env)} bash -c \"$(curl -fsSL {SCREEN_INSTALL_URL})\"")
 
 
 def own_ip(target: str) -> str:
@@ -210,6 +220,7 @@ def settings():
         tablet_url=status_url(), preview_url=status_url(external=False),
         agent_cmd=agent_command(c), agents=agent_rows(c, g.S),
         upd=updates().info(), upd_state=updates().state(),
+        screen_cmd=screen_command(c),
         settings_file=settings_path(c))
 
 
@@ -242,7 +253,8 @@ def save(section):
             for name, label, top in (("cpu", S["th_cpu_pct"], 100), ("mem", S["th_mem_pct"], 100),
                                      ("storage", S["th_storage_pct"], 100),
                                      ("cpu_temp", S["th_cpu_temp"], 120),
-                                     ("disk_temp", S["th_disk_temp"], 120)):
+                                     ("disk_temp", S["th_nvme_temp"], 120),
+                                     ("sata_temp", S["th_sata_temp"], 120)):
                 warn = number(f"{name}_warn", f"{label}: {S['th_warn']}", 1, top, float)
                 crit = number(f"{name}_crit", f"{label}: {S['th_crit']}", warn, top, float)
                 c.thresholds[name].warn = warn
@@ -264,6 +276,7 @@ def save(section):
 
         elif section == "temps":
             c.display.show_temps = checkbox("show_temps")
+            c.display.show_disk_temps = checkbox("show_disk_temps")
             c.agent_port = number("agent_port", S["f_agent_port"], 1, 65535)
             names = request.form.getlist("agent_node")
             hosts = request.form.getlist("agent_host")
@@ -273,6 +286,20 @@ def save(section):
                     c.agent_hosts[name] = host
                 else:
                     c.agent_hosts.pop(name, None)
+
+        elif section == "night":
+            nm = c.night
+            start = request.form.get("start", "").strip()
+            end = request.form.get("end", "").strip()
+            if not (TIME_RE.match(start) and TIME_RE.match(end)):
+                raise FormError(S["n_bad_time"])
+            nm.enabled = checkbox("enabled")
+            nm.start, nm.end = start, end
+            nm.mode = "off" if request.form.get("mode") == "off" else "dim"
+            nm.method = "backlight" if request.form.get("method") == "backlight" else "overlay"
+            nm.dim_level = number("dim_level", S["n_level"], 1, 90)
+            nm.day_level = number("day_level", S["n_day_level"], 10, 100)
+            nm.tap_wake = checkbox("tap_wake")
 
         elif section == "security":
             c.behind_proxy = checkbox("behind_proxy")
