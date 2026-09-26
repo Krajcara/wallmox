@@ -85,6 +85,9 @@ STRINGS = {
         "settings_file": "Settings file",
         "demo_mode": "Demo mode: the status page shows generated data.",
         "update_hint": "To update, run update in the container console.",
+        "token_help_title": "How to create a read-only API token",
+        "token_help_intro": "Run these three commands in the Shell of any Proxmox node:",
+        "token_help_after": "Copy the value from the last command into Token secret. Token ID is wallmox@pve!wallmox. Proxmox shows the secret only once. If the user already exists, the first command reports an error, which is fine.",
     },
     "sr": {
         # status page
@@ -170,6 +173,9 @@ STRINGS = {
         "settings_file": "Fajl sa podešavanjima",
         "demo_mode": "Demo režim: status stranica prikazuje izmišljene podatke.",
         "update_hint": "Za ažuriranje pokreni update u konzoli kontejnera.",
+        "token_help_title": "Kako napraviti API token samo za čitanje",
+        "token_help_intro": "Pokreni ove tri komande u Shell-u bilo kog Proxmox noda:",
+        "token_help_after": "Vrednost (value) iz poslednje komande upiši u Tajni deo tokena. ID tokena je wallmox@pve!wallmox. Proxmox tajni deo prikazuje samo jednom. Ako korisnik već postoji, prva komanda prijavi grešku, što je u redu.",
     },
 }
 

@@ -124,6 +124,14 @@
 
     <section class="panel" id="proxmox">
       <h2>{{ S.sec_proxmox }}</h2>
+      <details class="help" {% if not cfg.proxmox.token_secret %}open{% endif %}>
+        <summary>{{ S.token_help_title }}</summary>
+        <p>{{ S.token_help_intro }}</p>
+        <pre class="cmd">pveum user add wallmox@pve --comment "Wallmox (read-only)"
+pveum acl modify / --users wallmox@pve --roles PVEAuditor
+pveum user token add wallmox@pve wallmox --privsep 0</pre>
+        <p class="field-hint">{{ S.token_help_after }}</p>
+      </details>
       <form method="post" action="{{ url_for('admin.save', section='proxmox') }}" id="proxmox-form">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <div class="grid-2 grid-host">

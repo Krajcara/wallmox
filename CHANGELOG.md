@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.2
+
+- Fixed: the installer did not run the app setup, so the install stopped with
+  "invalid group: wallmox".
+- The installer no longer creates an API token. The Proxmox connection is set up
+  in the admin panel, which now shows the commands to create a read-only token.
+- The installer asks for the static IP and the gateway separately.
+- The installer asks where to store the Debian template when it is not downloaded yet.
+- New SSH question: no SSH, root login with password, or root login with a key.
+- No more locale warnings during the install.
+- Wallmox stays quiet in the log until a Proxmox connection is configured.
+
 ## 0.2.1
 
 - Installer asks for the container root password and DNS servers / search domain.

@@ -34,6 +34,8 @@ class Poller(threading.Thread):
 
     def poll_once(self):
         source = self.source
+        if source is None:      # no Proxmox connection configured yet
+            return
         try:
             snap = source()
         except Exception as exc:  # keep polling whatever happens

@@ -29,18 +29,34 @@ Open the **Shell** of a Proxmox node and run:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/krajcara/wallmox/main/install.sh)"
 ```
 
-The installer:
+The installer asks for:
 
-1. asks a few questions: container ID, hostname, storage, disk, memory, network
-   (DHCP or static IP with gateway), root password and DNS. Every one has a
-   default, so Enter is enough,
-2. downloads the latest Debian template,
-3. creates the user `wallmox@pve` with the read-only role **PVEAuditor** and an API token,
-4. creates an unprivileged container (1 core, 512 MB RAM, 4 GB disk),
-5. installs the newest Wallmox release in it and starts the service,
-6. prints the status page address, the admin panel address and the admin password.
+- container ID, hostname, storage, disk size, memory and cores (defaults: next free ID, `wallmox`, 4 GB, 512 MB, 1 core),
+- where to store the Debian template, if it is not downloaded yet,
+- IP address: DHCP, or a static address and gateway,
+- DNS servers and search domain (empty = same as the Proxmox node),
+- SSH access for root: none, with the root password, or with an SSH key,
+- the root password,
+- the language of the status page and admin panel.
 
-Wallmox never gets write access to Proxmox, and nothing is installed on the node itself.
+Then it creates an unprivileged Debian container, installs the newest Wallmox
+release and prints the admin panel address and a generated admin password.
+Nothing is installed on the Proxmox node itself.
+
+### Connect Wallmox to Proxmox
+
+Open the admin panel, section **Proxmox connection**. It shows these three
+commands; run them in the Shell of any Proxmox node:
+
+```bash
+pveum user add wallmox@pve --comment "Wallmox (read-only)"
+pveum acl modify / --users wallmox@pve --roles PVEAuditor
+pveum user token add wallmox@pve wallmox --privsep 0
+```
+
+Enter the node address, token ID `wallmox@pve!wallmox` and the `value` from the
+last command, press **Test connection**, then **Save**. The role PVEAuditor can
+only read, so Wallmox never changes anything in Proxmox.
 
 ## Try it without Proxmox
 
@@ -105,24 +121,17 @@ up with `update`.
 
 ## Manual install
 
-If you prefer not to run the installer, create a token on the node:
-
-```bash
-pveum user add wallmox@pve --comment "Wallmox dashboard (read-only)"
-pveum acl modify / --users wallmox@pve --roles PVEAuditor
-pveum user token add wallmox@pve dash --privsep 0
-```
-
-Then in a Debian 12 or 13 container:
+In a Debian 12 or 13 container:
 
 ```bash
 apt update && apt install -y git python3 python3-venv
 git clone https://github.com/krajcara/wallmox.git /opt/wallmox
 bash /opt/wallmox/scripts/setup-container.sh
-nano /etc/wallmox/config.toml     # host, token_id, token_secret
 runuser -u wallmox -- /opt/wallmox/venv/bin/python -m wallmox set-password
 systemctl start wallmox
 ```
+
+Then connect it to Proxmox in the admin panel as described above.
 
 ## Behind a reverse proxy
 

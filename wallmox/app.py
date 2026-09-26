@@ -14,14 +14,10 @@ from .config import proxmox_ready, save_settings
 from .demo import DemoSource
 from .i18n import strings
 from .poller import Poller
-from .proxmox import ProxmoxClient, ProxmoxError, collect
+from .proxmox import ProxmoxClient, collect
 from .ui import build_view
 
 log = logging.getLogger(__name__)
-
-
-def _not_configured():
-    raise ProxmoxError("Proxmox connection is not set up")
 
 
 def make_source(cfg):
@@ -29,7 +25,7 @@ def make_source(cfg):
     if cfg.demo:
         return DemoSource()
     if not proxmox_ready(cfg):
-        return _not_configured
+        return None          # the poller idles until the admin panel sets it up
     client = ProxmoxClient(cfg.proxmox)
     return lambda: collect(client)
 
