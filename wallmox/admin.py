@@ -4,6 +4,8 @@ import functools
 import hmac
 import re
 import secrets
+import shlex
+import socket
 
 from flask import (Blueprint, current_app, flash, g, jsonify, redirect,
                    render_template, request, session, url_for)
@@ -99,6 +101,51 @@ def known_names():
     return nodes, storages
 
 
+AGENT_INSTALL_URL = "https://raw.githubusercontent.com/krajcara/wallmox/main/agent/install.sh"
+
+
+def own_ip(target: str) -> str:
+    """This container's address on the way to Proxmox (for the firewall rule)."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect((target or "192.0.2.1", 9))
+            return sock.getsockname()[0]
+    except OSError:
+        return ""
+
+
+def agent_command(c) -> str:
+    env = [f"WALLMOX_AGENT_KEY={c.agent_key}"]
+    if c.agent_port != 9105:
+        env.append(f"WALLMOX_AGENT_PORT={c.agent_port}")
+    ip = own_ip(c.proxmox.host)
+    if ip and not ip.startswith("127."):
+        env.append(f"WALLMOX_AGENT_ALLOW={ip}")
+    return " ".join(env) + f' bash -c "$(curl -fsSL {shlex.quote(AGENT_INSTALL_URL)})"'
+
+
+def agent_rows(c, S):
+    snap = poller().state()["snapshot"] or {"nodes": []}
+    rows = []
+    for n in snap["nodes"]:
+        temps, err = n.get("temps"), n.get("temp_error")
+        if not c.display.show_temps:
+            status, state = S["agent_off"], "off"
+        elif err:
+            status, state = err, "error"
+        elif temps is None:
+            status, state = S["agent_waiting"], "waiting"
+        elif temps.get("cpu") is None:
+            status, state = S["agent_no_cpu"], "ok"
+        else:
+            status, state = S["agent_ok"].format(temp=round(temps["cpu"])), "ok"
+        override = c.agent_hosts.get(n["name"], "")
+        rows.append({"name": n["name"], "override": override,
+                     "detected": "" if override else n.get("agent_host", ""),
+                     "status": status, "state": state})
+    return rows
+
+
 def status_url(external=True):
     args = {"key": cfg().status_key} if cfg().status_key else {}
     return url_for("status", _external=external, **args)
@@ -156,6 +203,7 @@ def settings():
         languages=[(code, LANGUAGE_NAMES[code]) for code in LANGUAGES],
         nodes=nodes, storages=storages,
         tablet_url=status_url(), preview_url=status_url(external=False),
+        agent_cmd=agent_command(c), agents=agent_rows(c, g.S),
         settings_file=settings_path(c))
 
 
@@ -185,10 +233,12 @@ def save(section):
             poller().set_source(current_app.extensions["wallmox_make_source"](c))
 
         elif section == "thresholds":
-            for name, label in (("cpu", S["cpu"]), ("mem", S["ram"]),
-                                ("storage", S["storage"])):
-                warn = number(f"{name}_warn", f"{label}: {S['th_warn']}", 1, 100, float)
-                crit = number(f"{name}_crit", f"{label}: {S['th_crit']}", warn, 100, float)
+            for name, label, top in (("cpu", S["th_cpu_pct"], 100), ("mem", S["th_mem_pct"], 100),
+                                     ("storage", S["th_storage_pct"], 100),
+                                     ("cpu_temp", S["th_cpu_temp"], 120),
+                                     ("disk_temp", S["th_disk_temp"], 120)):
+                warn = number(f"{name}_warn", f"{label}: {S['th_warn']}", 1, top, float)
+                crit = number(f"{name}_crit", f"{label}: {S['th_crit']}", warn, top, float)
                 c.thresholds[name].warn = warn
                 c.thresholds[name].crit = crit
 
@@ -205,6 +255,18 @@ def save(section):
                 old = getattr(d, field)
                 setattr(d, field, sorted({k for k in known if k not in shown}
                                          | {h for h in old if h not in known}))
+
+        elif section == "temps":
+            c.display.show_temps = checkbox("show_temps")
+            c.agent_port = number("agent_port", S["f_agent_port"], 1, 65535)
+            names = request.form.getlist("agent_node")
+            hosts = request.form.getlist("agent_host")
+            for name, host in zip(names, hosts):
+                host = host.strip()
+                if host:
+                    c.agent_hosts[name] = host
+                else:
+                    c.agent_hosts.pop(name, None)
 
         elif section == "security":
             c.behind_proxy = checkbox("behind_proxy")
@@ -224,6 +286,13 @@ def status_key():
     c = cfg()
     c.status_key = secrets.token_urlsafe(12) if request.form.get("action") == "new" else ""
     return saved("security")
+
+
+@bp.route("/agent-key", methods=["POST"])
+@login_required
+def agent_key():
+    cfg().agent_key = secrets.token_urlsafe(24)
+    return saved("temps")
 
 
 @bp.route("/password", methods=["POST"])

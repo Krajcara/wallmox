@@ -54,6 +54,9 @@ class Poller(threading.Thread):
                 if node["online"]:
                     self._history[(node["name"], "cpu")].append(node["cpu"])
                     self._history[(node["name"], "mem")].append(node["mem_pct"])
+                    temp = (node.get("temps") or {}).get("cpu")
+                    if temp is not None:
+                        self._history[(node["name"], "temp")].append(temp)
 
     def run(self):
         while not self._stop.is_set():

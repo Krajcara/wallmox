@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+- Temperatures. A small read-only agent (`agent/`) runs on each Proxmox node and
+  reports the CPU and NVMe temperatures from the kernel's sensors. No lm-sensors,
+  no extra packages, runs as an unprivileged user and needs a key.
+- Status page: third gauge for the CPU temperature, disk temperatures under the
+  storage bars, temperature as a dashed line in the CPU trend.
+- Admin panel: new Temperatures section with the install command for the nodes
+  (key filled in), the state of every node's agent, address overrides and a new
+  key button. Warning levels for CPU and disk temperatures.
+- Works with clusters: node addresses come from Proxmox, so new nodes only need
+  the install command.
+
 ## 0.2.2
 
 - Fixed: the installer did not run the app setup, so the install stopped with

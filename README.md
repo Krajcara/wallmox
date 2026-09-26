@@ -58,6 +58,26 @@ Enter the node address, token ID `wallmox@pve!wallmox` and the `value` from the
 last command, press **Test connection**, then **Save**. The role PVEAuditor can
 only read, so Wallmox never changes anything in Proxmox.
 
+### Temperatures
+
+Proxmox does not report temperatures, so Wallmox reads them from a small agent
+on each node. Open the admin panel, section **Temperatures**, copy the command
+shown there (your key is already in it) and run it in the Shell of every node:
+
+```bash
+WALLMOX_AGENT_KEY=... bash -c "$(curl -fsSL https://raw.githubusercontent.com/krajcara/wallmox/main/agent/install.sh)"
+```
+
+The agent is one Python file using only the standard library. It reads the
+kernel's sensors (no lm-sensors needed), runs as an unprivileged user, answers
+only requests with the key and cannot change anything. It reports the CPU
+temperature and NVMe drives; SATA drives only show up when the kernel's
+`drivetemp` module is loaded. Run the same command again to update the agent;
+add `WALLMOX_AGENT_UNINSTALL=1` in front to remove it.
+
+When a node joins the cluster, run the command there as well. Wallmox finds
+the node's address through Proxmox.
+
 ## Try it without Proxmox
 
 ```bash
@@ -171,7 +191,7 @@ requests.
 ## Roadmap
 
 - ~~**0.2** Installer run from the Proxmox host shell, admin panel for settings~~
-- **0.3** Temperatures through a small agent on each node, longer history
+- ~~**0.3** Temperatures through a small agent on each node~~
 - **0.4** Updates from the admin panel with rollback
 - **1.0** Multi-node and cluster polish, documentation
 

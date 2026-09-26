@@ -124,3 +124,20 @@ def test_proxmox_save_keeps_secret_when_blank(env):
                                         "token_secret": ""})
     assert cfg.proxmox.host == "10.0.0.5"
     assert cfg.proxmox.token_secret == "keep-me"
+
+
+def test_temps_section(env):
+    app, cfg, _ = env
+    c = app.test_client()
+    login(c)
+    html = c.get("/admin/").get_data(as_text=True)
+    assert f"WALLMOX_AGENT_KEY={cfg.agent_key}" in html
+    token = csrf(c, "/admin/")
+    c.post("/admin/save/temps", data={"csrf": token, "agent_port": "9200",
+                                      "agent_node": ["pve1", "pve2"],
+                                      "agent_host": ["10.0.0.9", ""]})
+    assert cfg.display.show_temps is False
+    assert cfg.agent_port == 9200 and cfg.agent_hosts == {"pve1": "10.0.0.9"}
+    old = cfg.agent_key
+    c.post("/admin/agent-key", data={"csrf": token})
+    assert cfg.agent_key and cfg.agent_key != old

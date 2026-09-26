@@ -50,6 +50,7 @@ class Display:
     show_guests: bool = True
     show_stopped_guests: bool = True
     show_cpu_model: bool = True
+    show_temps: bool = True
     hidden_nodes: list = field(default_factory=list)
     hidden_storages: list = field(default_factory=list)
 
@@ -59,6 +60,8 @@ def _default_thresholds() -> dict:
         "cpu": Threshold(70, 90),
         "mem": Threshold(80, 92),
         "storage": Threshold(80, 90),
+        "cpu_temp": Threshold(70, 85),    # degrees Celsius
+        "disk_temp": Threshold(55, 65),
     }
 
 
@@ -73,6 +76,9 @@ class Config:
     history_size: int = 72        # samples kept for the CPU sparkline
     status_key: str = ""          # optional: require ?key=... on the status page
     behind_proxy: bool = False    # trust X-Forwarded-* headers from a reverse proxy
+    agent_key: str = ""           # shared key of the temperature agents on the nodes
+    agent_port: int = 9105
+    agent_hosts: dict = field(default_factory=dict)   # node name -> address override
     demo: bool = False
     proxmox: ProxmoxConfig = field(default_factory=ProxmoxConfig)
     thresholds: dict = field(default_factory=_default_thresholds)
@@ -87,7 +93,7 @@ class Config:
 
 # Values the admin panel may change. Anything else stays TOML-only.
 EDITABLE_TOP = ("title", "language", "poll_interval", "refresh_interval",
-                "status_key", "behind_proxy")
+                "status_key", "behind_proxy", "agent_key", "agent_port", "agent_hosts")
 EDITABLE_PROXMOX = ("host", "port", "token_id", "token_secret", "verify_ssl")
 LANGUAGES = ("en", "sr")
 
@@ -116,7 +122,8 @@ def _apply(cfg: Config, raw: dict) -> None:
     """Copy known keys from a parsed TOML or JSON dict onto cfg."""
     for key in ("listen", "port", "title", "language", "poll_interval",
                 "refresh_interval", "history_size", "status_key",
-                "behind_proxy", "demo", "admin_password_hash", "secret_key"):
+                "behind_proxy", "demo", "admin_password_hash", "secret_key",
+                "agent_key", "agent_port", "agent_hosts"):
         if key in raw:
             setattr(cfg, key, raw[key])
 
@@ -140,6 +147,9 @@ def normalize(cfg: Config) -> None:
     cfg.refresh_interval = max(3, int(cfg.refresh_interval))
     cfg.history_size = max(10, int(cfg.history_size))
     cfg.proxmox.port = int(cfg.proxmox.port)
+    cfg.agent_port = int(cfg.agent_port)
+    if not isinstance(cfg.agent_hosts, dict):
+        cfg.agent_hosts = {}
     if cfg.language not in LANGUAGES:
         cfg.language = "en"
     for th in cfg.thresholds.values():

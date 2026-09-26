@@ -135,6 +135,23 @@ input[readonly] { color: var(--muted); }
 .test-result.is-error { border-left-color: var(--crit); }
 
 .url-row { margin: 0.8rem 0 0.9rem; }
+
+.copy-cmd { align-items: flex-start; margin: 0.4rem 0 0.4rem; }
+.copy-cmd .cmd { flex: 1; margin: 0; user-select: all; }
+.agents { width: 100%; border-collapse: collapse; margin: 1rem 0 0.3rem; }
+.agents th, .agents td { text-align: left; padding: 0.35rem 0.6rem 0.35rem 0; vertical-align: middle; }
+.agents thead th { font-weight: 400; color: var(--muted); font-size: 0.9rem; }
+.agents tbody th { font-weight: 600; width: 6rem; }
+.agents td:nth-child(2) { width: 45%; }
+.agent-state { font-size: 0.9rem; color: var(--muted); }
+.agent-state::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--track); margin-right: 0.4rem; }
+.agent-ok { color: var(--ink); }
+.agent-ok::before { background: var(--ok); }
+.agent-error { color: var(--warn); }
+.agent-error::before { background: var(--crit); }
+.grid-port { grid-template-columns: 9rem; margin-top: 1rem; }
+.key-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-top: 1.4rem; padding-top: 1.3rem; border-top: 1px solid var(--rule); }
+.key { display: block; font-size: 0.9rem; color: var(--muted); word-break: break-all; }
 .copy { display: flex; gap: 0.5rem; }
 
 .about { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; font-size: 0.9rem; color: var(--muted); padding: 0.4rem 0.2rem 2rem; }

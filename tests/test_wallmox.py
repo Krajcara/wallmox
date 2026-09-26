@@ -15,7 +15,7 @@ def test_level_and_gauge():
     assert level(70, th) == "warn"
     assert level(95, th) == "crit"
     g = gauge(150, th, "CPU")
-    assert g["value"] == 100 and g["level"] == "crit"
+    assert g["value"] == 150 and g["level"] == "crit" and g["fill"].startswith(g["track"].split()[0])
     assert gauge(0, th, "CPU")["show_fill"] is False
 
 

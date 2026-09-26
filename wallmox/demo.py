@@ -12,7 +12,8 @@ class DemoSource:
         self.start = time.time()
         self.rng = random.Random(7)
         self.nodes = [
-            {"name": "pve1", "cores": 16, "model": "AMD Ryzen 7 5700G", "mem": 64 * GiB,
+            {"name": "pve1", "cores": 16, "temp_base": 41,
+             "disks": [("nvme0", "Samsung SSD 980 PRO 1TB", 43), ("nvme1", "WD Red SN700 2TB", 47)], "model": "AMD Ryzen 7 5700G", "mem": 64 * GiB,
              "base_cpu": 22, "base_mem": 0.58, "uptime": 38 * 86400 + 5 * 3600,
              "storage": [("local", "dir", 94, 0.41), ("local-lvm", "lvmthin", 832, 0.63),
                          ("tank", "zfspool", 3600, 0.86)],
@@ -20,7 +21,8 @@ class DemoSource:
                         (102, "nextcloud", "lxc", True), (103, "jellyfin", "lxc", True),
                         (104, "pihole", "lxc", True), (105, "wallmox", "lxc", True),
                         (110, "win11-lab", "vm", False), (111, "kali", "vm", False)]},
-            {"name": "pve2", "cores": 4, "model": "Intel N100", "mem": 16 * GiB,
+            {"name": "pve2", "cores": 4, "temp_base": 36,
+             "disks": [("nvme0", "Crucial P3 500GB", 39)], "model": "Intel N100", "mem": 16 * GiB,
              "base_cpu": 9, "base_mem": 0.47, "uptime": 12 * 86400 + 19 * 3600,
              "storage": [("local", "dir", 58, 0.33), ("local-lvm", "lvmthin", 400, 0.52),
                          ("backup-nfs", "nfs", 7400, 0.71)],
@@ -46,6 +48,14 @@ class DemoSource:
                              "total": size * GiB, "pct": round(frac * 100, 1),
                              "shared": ty == "nfs"}
                             for s, ty, size, frac in n["storage"]],
+                "agent_host": f"192.168.0.{20 + i}",
+                "temp_error": None,
+                "temps": {
+                    "cpu": round(n["temp_base"] + cpu * 0.38 + self.rng.uniform(-0.8, 0.8), 1),
+                    "disks": [{"name": d, "model": m, "temp": round(base + math.sin(t / 60.0 + i) * 1.5, 1)}
+                              for d, m, base in n["disks"]],
+                    "version": "demo",
+                },
                 "guests": sorted(
                     [{"vmid": v, "name": nm, "kind": k, "running": r,
                       "cpu": round(self.rng.uniform(0, 30), 1) if r else 0.0}

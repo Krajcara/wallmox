@@ -16,6 +16,7 @@
       <span class="node-meta">{{ S.up }} {{ n.uptime }}</span>
       <span class="node-meta">{{ n.cores }} {{ S.cores }}</span>
       {% if n.load %}<span class="node-meta node-load">{{ S.load }} {{ n.load }}</span>{% endif %}
+      {% if n.temp_note %}<span class="node-meta node-warnmeta">{{ n.temp_note }}</span>{% endif %}
       {% endif %}
     </header>
 
@@ -24,15 +25,19 @@
     {% else %}
     {% if n.error %}<p class="node-error">{{ n.error }}</p>{% endif %}
     <div class="node-body">
-      <div class="gauges">
+      <div class="gauges{% if n.temp_gauge %} gauges-3{% endif %}">
         <div class="gauge-box">{{ gauge(n.cpu_gauge) }}<div class="gauge-sub">{{ n.cpu_model or '&nbsp;'|safe }}</div></div>
         <div class="gauge-box">{{ gauge(n.mem_gauge) }}<div class="gauge-sub">{{ n.mem_text }}</div></div>
+        {% if n.temp_gauge %}<div class="gauge-box">{{ gauge(n.temp_gauge) }}<div class="gauge-sub">{{ S.temp_sub }}</div></div>{% endif %}
       </div>
 
       <div class="details">
         {% if n.spark %}
         <div class="trend trend-{{ n.cpu_gauge.level }}">
-          <div class="row-label"><span>{{ S.cpu }}</span><span class="muted">{{ n.spark_label }}</span></div>
+          <div class="row-label">
+            <span>{{ S.cpu }}{% if n.spark.line2 %} <span class="legend-temp">{{ S.and_temp }}</span>{% endif %}</span>
+            <span class="muted">{{ n.spark_label }}</span>
+          </div>
           {{ spark(n.spark) }}
         </div>
         {% endif %}
@@ -49,6 +54,15 @@
           </div>
           {% else %}
           <p class="muted">{{ S.no_storage }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if n.disks %}
+        <div class="disks">
+          <span class="disks-label">{{ S.disks }}</span>
+          {% for d in n.disks %}
+          <span class="dchip dchip-{{ d.level }}" title="{{ d.model }}">{{ d.name }} <b>{{ d.temp }}°</b></span>
           {% endfor %}
         </div>
         {% endif %}

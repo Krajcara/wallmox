@@ -21,6 +21,7 @@
   <nav class="sections" aria-label="{{ S.admin_title }}">
     <a href="#general">{{ S.sec_general }}</a>
     <a href="#display">{{ S.sec_display }}</a>
+    <a href="#temps">{{ S.sec_temps }}</a>
     <a href="#thresholds">{{ S.sec_thresholds }}</a>
     <a href="#proxmox">{{ S.sec_proxmox }}</a>
     <a href="#security">{{ S.sec_security }}</a>
@@ -101,6 +102,52 @@
       </form>
     </section>
 
+    <section class="panel" id="temps">
+      <h2>{{ S.sec_temps }}</h2>
+      <form method="post" action="{{ url_for('admin.save', section='temps') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="toggles">{{ toggle("show_temps", S.d_temps, cfg.display.show_temps) }}</div>
+
+        <p>{{ S.temps_intro }}</p>
+        <div class="copy copy-cmd">
+          <pre class="cmd" id="agent-cmd">{{ agent_cmd }}</pre>
+          <button class="btn" type="button" data-copy="agent-cmd" data-done="{{ S.copied }}">{{ S.copy_btn }}</button>
+        </div>
+        <p class="field-hint">{{ S.temps_after }}</p>
+
+        {% if agents %}
+        <table class="agents">
+          <thead><tr><th>{{ S.agent_col_node }}</th><th>{{ S.agent_col_addr }}</th><th>{{ S.agent_col_status }}</th></tr></thead>
+          <tbody>
+          {% for a in agents %}
+            <tr>
+              <th scope="row">{{ a.name }}<input type="hidden" name="agent_node" value="{{ a.name }}"></th>
+              <td><input type="text" name="agent_host" value="{{ a.override }}" placeholder="{{ a.detected }}"
+                         aria-label="{{ a.name }} {{ S.agent_col_addr }}" autocomplete="off" spellcheck="false"></td>
+              <td><span class="agent-state agent-{{ a.state }}">{{ a.status }}</span></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <p class="field-hint">{{ S.h_agent_addr }}</p>
+        {% endif %}
+
+        <div class="grid-2 grid-port">
+          {{ field("agent_port", S.f_agent_port, cfg.agent_port, "number", attrs='min="1" max="65535"') }}
+        </div>
+        <div class="actions"><button class="btn btn-primary" type="submit">{{ S.save }}</button></div>
+      </form>
+      <form method="post" action="{{ url_for('admin.agent_key') }}" class="subsection key-row">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div>
+          <span class="field-label">{{ S.agent_key_label }}</span>
+          <code class="key">{{ cfg.agent_key }}</code>
+          <small class="field-hint">{{ S.h_new_agent_key }}</small>
+        </div>
+        <button class="btn" type="submit">{{ S.new_agent_key }}</button>
+      </form>
+    </section>
+
     <section class="panel" id="thresholds">
       <h2>{{ S.sec_thresholds }}</h2>
       <form method="post" action="{{ url_for('admin.save', section='thresholds') }}">
@@ -108,12 +155,13 @@
         <table class="levels">
           <thead><tr><th></th><th><span class="swatch swatch-warn"></span>{{ S.th_warn }}</th><th><span class="swatch swatch-crit"></span>{{ S.th_crit }}</th></tr></thead>
           <tbody>
-          {% for name, label in (("cpu", S.cpu), ("mem", S.ram), ("storage", S.storage)) %}
+          {% for name, label, top in (("cpu", S.th_cpu_pct, 100), ("mem", S.th_mem_pct, 100), ("storage", S.th_storage_pct, 100),
+                                      ("cpu_temp", S.th_cpu_temp, 120), ("disk_temp", S.th_disk_temp, 120)) %}
             {% set th = cfg.thresholds[name] %}
             <tr>
               <th scope="row">{{ label }}</th>
-              <td><input type="number" name="{{ name }}_warn" value="{{ th.warn|round|int }}" min="1" max="100" aria-label="{{ label }} {{ S.th_warn }}"></td>
-              <td><input type="number" name="{{ name }}_crit" value="{{ th.crit|round|int }}" min="1" max="100" aria-label="{{ label }} {{ S.th_crit }}"></td>
+              <td><input type="number" name="{{ name }}_warn" value="{{ th.warn|round|int }}" min="1" max="{{ top }}" aria-label="{{ label }} {{ S.th_warn }}"></td>
+              <td><input type="number" name="{{ name }}_crit" value="{{ th.crit|round|int }}" min="1" max="{{ top }}" aria-label="{{ label }} {{ S.th_crit }}"></td>
             </tr>
           {% endfor %}
           </tbody>

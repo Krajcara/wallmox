@@ -37,16 +37,19 @@ def _arc(r: float):
     return circ, circ * GAUGE_SWEEP
 
 
-def gauge(pct: float, th, label: str) -> dict:
-    pct = max(0.0, min(100.0, pct))
+def gauge(value: float, th, label: str, unit: str = "%") -> dict:
+    """A 270 degree gauge on a 0-100 scale (percent, or degrees Celsius)."""
+    raw = value
+    pct = max(0.0, min(100.0, value))
     circ, sweep = _arc(GAUGE_R)
     zcirc, zsweep = _arc(ZONE_R)
     warn_start = zsweep * th.warn / 100
     crit_start = zsweep * th.crit / 100
     return {
         "label": label,
-        "value": int(round(pct)),
-        "level": level(pct, th),
+        "value": int(round(raw)),
+        "unit": unit,
+        "level": level(raw, th),
         "c": GAUGE_CENTER, "r": GAUGE_R, "zr": ZONE_R, "rot": GAUGE_ROTATE,
         "track": f"{sweep:.2f} {circ:.2f}",
         "fill": f"{sweep * pct / 100:.2f} {circ:.2f}",
@@ -59,20 +62,30 @@ def gauge(pct: float, th, label: str) -> dict:
     }
 
 
-def sparkline(values, capacity: int) -> dict | None:
-    if len(values) < 2:
-        return None
+def _points(values, capacity: int):
     step = SPARK_W / max(1, capacity - 1)
     x0 = SPARK_W - step * (len(values) - 1)   # newest sample sits at the right edge
     pts = []
     for i, v in enumerate(values):
         v = max(0.0, min(100.0, v))
         pts.append(f"{x0 + i * step:.1f},{SPARK_H - 2 - v / 100 * (SPARK_H - 4):.1f}")
-    return {
+    return x0, pts
+
+
+def sparkline(values, capacity: int, second=None) -> dict | None:
+    """CPU trend; `second` is an optional overlay on the same 0-100 scale (degrees C)."""
+    if len(values) < 2:
+        return None
+    x0, pts = _points(values, capacity)
+    spark = {
         "w": SPARK_W, "h": SPARK_H,
         "line": " ".join(pts),
         "area": f"{x0:.1f},{SPARK_H} " + " ".join(pts) + f" {SPARK_W},{SPARK_H}",
+        "line2": None,
     }
+    if second and len(second) >= 2:
+        spark["line2"] = " ".join(_points(second, capacity)[1])
+    return spark
 
 
 def fmt_bytes(n: float) -> str:
@@ -155,6 +168,20 @@ def build_view(state: dict, cfg, S: dict) -> dict:
 
         node["cpu_gauge"] = gauge(n["cpu"], th["cpu"], S["cpu"])
         node["mem_gauge"] = gauge(n["mem_pct"], th["mem"], S["ram"])
+
+        temps = n.get("temps") if disp.show_temps else None
+        cpu_temp = (temps or {}).get("cpu")
+        node["temp_gauge"] = (gauge(cpu_temp, th["cpu_temp"], S["temp"], "°C")
+                              if cpu_temp is not None else None)
+        # Only complain on the tablet if this node's agent worked before.
+        had_temps = bool(state["history"].get((n["name"], "temp")))
+        node["temp_note"] = (S["temp_unavailable"]
+                             if disp.show_temps and n.get("temp_error") and had_temps else "")
+        node["disks"] = [{
+            "name": d["name"], "model": d.get("model", ""),
+            "temp": int(round(d["temp"])),
+            "level": level(d["temp"], th["disk_temp"]),
+        } for d in (temps or {}).get("disks", [])]
         node["mem_text"] = f"{fmt_bytes(n['mem_used'])} {S['of']} {fmt_bytes(n['mem_total'])}"
 
         node["storage"] = [{
@@ -168,7 +195,9 @@ def build_view(state: dict, cfg, S: dict) -> dict:
 
         spark = None
         if disp.show_trend:
-            spark = sparkline(state["history"].get((n["name"], "cpu"), []), cfg.history_size)
+            temp_hist = state["history"].get((n["name"], "temp"), []) if node["temp_gauge"] else None
+            spark = sparkline(state["history"].get((n["name"], "cpu"), []), cfg.history_size,
+                              temp_hist)
         node["spark"] = spark
         node["spark_label"] = S["last_hour"].format(min=spark_minutes)
 
@@ -183,6 +212,8 @@ def build_view(state: dict, cfg, S: dict) -> dict:
         node["guests_hidden"] = max(0, len(guests) - MAX_GUEST_CHIPS)
 
         node["level"] = worst([node["cpu_gauge"]["level"], node["mem_gauge"]["level"]]
+                              + ([node["temp_gauge"]["level"]] if node["temp_gauge"] else [])
+                              + [d["level"] for d in node["disks"]]
                               + ([s["level"] for s in node["storage"]] if disp.show_storage else [])
                               + (["warn"] if node["error"] else []))
         view["nodes"].append(node)

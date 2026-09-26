@@ -1,5 +1,5 @@
 {% macro gauge(g) -%}
-<svg class="gauge gauge-{{ g.level }}" viewBox="0 0 130 130" role="img" aria-label="{{ g.label }} {{ g.value }}%">
+<svg class="gauge gauge-{{ g.level }}" viewBox="0 0 130 130" role="img" aria-label="{{ g.label }} {{ g.value }}{{ g.unit }}">
   <g transform="rotate({{ g.rot }} {{ g.c }} {{ g.c }})" fill="none">
     <circle class="g-track" cx="{{ g.c }}" cy="{{ g.c }}" r="{{ g.r }}" stroke-width="11" stroke-dasharray="{{ g.track }}"/>
     {%- if g.show_fill %}
@@ -8,7 +8,7 @@
     <circle class="g-zone-warn" cx="{{ g.c }}" cy="{{ g.c }}" r="{{ g.zr }}" stroke-width="3" stroke-dasharray="{{ g.warn_dash }}" stroke-dashoffset="{{ g.warn_offset }}"/>
     <circle class="g-zone-crit" cx="{{ g.c }}" cy="{{ g.c }}" r="{{ g.zr }}" stroke-width="3" stroke-dasharray="{{ g.crit_dash }}" stroke-dashoffset="{{ g.crit_offset }}"/>
   </g>
-  <text class="g-value" x="{{ g.c }}" y="76" text-anchor="middle">{{ g.value }}<tspan class="g-unit" dx="1">%</tspan></text>
+  <text class="g-value" x="{{ g.c }}" y="76" text-anchor="middle">{{ g.value }}<tspan class="g-unit" dx="1">{{ g.unit }}</tspan></text>
   <text class="g-label" x="{{ g.c }}" y="120" text-anchor="middle">{{ g.label }}</text>
 </svg>
 {%- endmacro %}
@@ -18,5 +18,8 @@
   <line class="spark-grid" x1="0" y1="{{ s.h / 2 }}" x2="{{ s.w }}" y2="{{ s.h / 2 }}" vector-effect="non-scaling-stroke"/>
   <polygon class="spark-area" points="{{ s.area }}"/>
   <polyline class="spark-line" points="{{ s.line }}" fill="none" vector-effect="non-scaling-stroke"/>
+  {%- if s.line2 %}
+  <polyline class="spark-line2" points="{{ s.line2 }}" fill="none" vector-effect="non-scaling-stroke"/>
+  {%- endif %}
 </svg>
 {%- endmacro %}

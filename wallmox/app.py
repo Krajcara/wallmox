@@ -15,6 +15,7 @@ from .demo import DemoSource
 from .i18n import strings
 from .poller import Poller
 from .proxmox import ProxmoxClient, collect
+from .temps import add_temps
 from .ui import build_view
 
 log = logging.getLogger(__name__)
@@ -27,7 +28,13 @@ def make_source(cfg):
     if not proxmox_ready(cfg):
         return None          # the poller idles until the admin panel sets it up
     client = ProxmoxClient(cfg.proxmox)
-    return lambda: collect(client)
+
+    def source():
+        snap = collect(client)
+        if cfg.display.show_temps and cfg.agent_key:
+            add_temps(snap, client, cfg)
+        return snap
+    return source
 
 
 class DynamicProxyFix:
@@ -54,6 +61,15 @@ def ensure_secret_key(cfg) -> str:
     return cfg.secret_key
 
 
+def ensure_agent_key(cfg) -> None:
+    if not cfg.agent_key:
+        cfg.agent_key = secrets.token_urlsafe(24)
+        try:
+            save_settings(cfg)
+        except OSError as exc:
+            log.warning("Cannot store the agent key (%s).", exc)
+
+
 def create_app(cfg, start_poller: bool = True) -> Flask:
     app = Flask(__name__)
     app.config["WALLMOX"] = cfg
@@ -64,6 +80,7 @@ def create_app(cfg, start_poller: bool = True) -> Flask:
         PERMANENT_SESSION_LIFETIME=12 * 3600,
     )
     app.wsgi_app = DynamicProxyFix(app.wsgi_app, cfg)
+    ensure_agent_key(cfg)
 
     poller = Poller(make_source(cfg), cfg.poll_interval, cfg.history_size)
     app.extensions["wallmox_poller"] = poller
