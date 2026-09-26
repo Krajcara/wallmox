@@ -108,7 +108,11 @@ wallmox set-password
 
 ## Updating
 
-Open the container console in Proxmox (or run `pct enter <ID>` on the node) and run:
+In the admin panel, section **Updates**, click **Update to vX.Y.Z** when a new
+release is out. The panel shows what is new and follows the update live.
+
+You can also open the container console in Proxmox (or run `pct enter <ID>` on
+the node) and run:
 
 ```bash
 update
@@ -192,7 +196,7 @@ requests.
 
 - ~~**0.2** Installer run from the Proxmox host shell, admin panel for settings~~
 - ~~**0.3** Temperatures through a small agent on each node~~
-- **0.4** Updates from the admin panel with rollback
+- ~~**0.4** Updates from the admin panel with rollback~~
 - **1.0** Multi-node and cluster polish, documentation
 
 ## Development

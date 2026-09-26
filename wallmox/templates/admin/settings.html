@@ -25,7 +25,9 @@
     <a href="#thresholds">{{ S.sec_thresholds }}</a>
     <a href="#proxmox">{{ S.sec_proxmox }}</a>
     <a href="#security">{{ S.sec_security }}</a>
+    <a href="#update">{{ S.sec_update }}</a>
   </nav>
+  {% if upd.newer %}<a class="badge-new" href="#update">{{ S.upd_badge.format(v=upd.latest.tag) }}</a>{% endif %}
   <div class="topbar-actions">
     <a class="btn" href="{{ preview_url }}" target="_blank" rel="noopener">{{ S.open_status }}</a>
     <form method="post" action="{{ url_for('admin.logout') }}">
@@ -242,10 +244,57 @@ pveum user token add wallmox@pve wallmox --privsep 0</pre>
       </div>
     </section>
 
+    <section class="panel" id="update">
+      <h2>{{ S.sec_update }}</h2>
+      <dl class="versions">
+        <div><dt>{{ S.upd_installed }}</dt><dd>{{ upd.current }}</dd></div>
+        <div><dt>{{ S.upd_latest }}</dt><dd>
+          {% if upd.latest %}{{ upd.latest.tag }} <span class="muted">{{ upd.latest.date }}</span>
+          {% elif upd.error == "no_releases" %}<span class="muted">{{ S.upd_no_releases }}</span>
+          {% elif upd.error %}<span class="muted">{{ upd.error }}</span>
+          {% else %}<span class="muted">…</span>{% endif %}
+        </dd></div>
+      </dl>
+
+      {% if upd.newer %}
+        <p class="msg msg-warn">{{ S.upd_available.format(v=upd.latest.tag) }}</p>
+        {% if upd.latest.notes %}
+        <details class="notes" open>
+          <summary>{{ S.upd_notes }}</summary>
+          <div class="notes-body">{{ upd.latest.notes }}</div>
+        </details>
+        {% endif %}
+      {% elif upd.latest %}
+        <p class="msg msg-ok">{{ S.upd_uptodate }}</p>
+      {% endif %}
+
+      <div id="upd-progress" class="upd-progress" hidden
+           data-status-url="{{ url_for('admin.update_status') }}"
+           data-version="{{ upd.current }}"
+           data-running="{{ S.upd_running }}" data-done="{{ S.upd_done }}" data-failed="{{ S.upd_failed }}"
+           data-active="{{ '1' if upd_state.state in ('queued', 'running') else '' }}">
+        <p class="msg" id="upd-msg"></p>
+        <details open><summary>{{ S.upd_log }}</summary><pre class="cmd upd-log" id="upd-log"></pre></details>
+      </div>
+
+      <div class="actions">
+        {% if upd.newer and upd.can_update %}
+        <button class="btn btn-primary" type="button" id="upd-start"
+                data-url="{{ url_for('admin.update_start') }}" data-csrf="{{ csrf }}"
+                data-confirm="{{ S.upd_confirm }}">{{ S.upd_start.format(v=upd.latest.tag) }}</button>
+        {% endif %}
+        <form method="post" action="{{ url_for('admin.update_check') }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn" type="submit">{{ S.upd_check }}</button>
+        </form>
+        {% if upd.latest and upd.latest.url %}<a class="btn btn-quiet" href="{{ upd.latest.url }}" target="_blank" rel="noopener">{{ S.upd_github }}</a>{% endif %}
+      </div>
+      {% if upd.newer and not upd.can_update %}<p class="field-hint">{{ S.upd_manual }}</p>{% endif %}
+    </section>
+
     <footer class="about">
       <span>Wallmox {{ S.version|lower }} {{ version }}</span>
       <a href="https://github.com/krajcara/wallmox" rel="noopener" target="_blank">github.com/krajcara/wallmox</a>
-      <span>{{ S.update_hint }}</span>
       <span class="muted">{{ S.settings_file }}: {{ settings_file }}</span>
     </footer>
   </main>

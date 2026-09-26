@@ -16,6 +16,7 @@ from .i18n import strings
 from .poller import Poller
 from .proxmox import ProxmoxClient, collect
 from .temps import add_temps
+from .updates import UpdateChecker
 from .ui import build_view
 
 log = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ def create_app(cfg, start_poller: bool = True) -> Flask:
     poller = Poller(make_source(cfg), cfg.poll_interval, cfg.history_size)
     app.extensions["wallmox_poller"] = poller
     app.extensions["wallmox_make_source"] = make_source
+    app.extensions["wallmox_updates"] = UpdateChecker(cfg.data_dir)
     if start_poller:
         poller.start()
 

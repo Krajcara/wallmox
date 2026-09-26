@@ -1,0 +1,7 @@
+[Unit]
+Description=Update Wallmox (started from the admin panel)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/wallmox/scripts/update-from-panel.sh
+TimeoutStartSec=15min

@@ -21,6 +21,7 @@ id wallmox >/dev/null 2>&1 || \
   useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin wallmox
 
 install -d -o wallmox -g wallmox -m 750 "$DATA_DIR"
+install -d -o wallmox -g wallmox -m 750 "$DATA_DIR/update"   # admin panel update requests
 install -d -o root -g wallmox -m 750 "$CONF_DIR"
 if [[ ! -f "$CONF_DIR/config.toml" ]]; then
   install -o root -g wallmox -m 640 "$APP_DIR/config.example.toml" "$CONF_DIR/config.toml"
@@ -43,6 +44,8 @@ EOF
 chmod 755 /usr/bin/wallmox
 
 install -m 644 "$APP_DIR/systemd/wallmox.service" /etc/systemd/system/wallmox.service
+install -m 644 "$APP_DIR/systemd/wallmox-update.path" /etc/systemd/system/wallmox-update.path
+install -m 644 "$APP_DIR/systemd/wallmox-update.service" /etc/systemd/system/wallmox-update.service
 
 # "update" command, same idea as the community-scripts containers
 cat > /usr/bin/update <<EOF
@@ -53,5 +56,6 @@ EOF
 chmod 755 /usr/bin/update
 systemctl daemon-reload
 systemctl enable wallmox >/dev/null 2>&1
+systemctl enable --now wallmox-update.path >/dev/null 2>&1 || true
 
 echo "Wallmox is set up in $APP_DIR."

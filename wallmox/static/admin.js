@@ -37,6 +37,62 @@
     });
   }
 
+  // Update from the panel: start, then follow the log until Wallmox is back.
+  const progress = document.getElementById("upd-progress");
+  if (progress) {
+    const msg = document.getElementById("upd-msg");
+    const logEl = document.getElementById("upd-log");
+    const startBtn = document.getElementById("upd-start");
+    const oldVersion = progress.dataset.version;
+
+    const follow = () => {
+      progress.hidden = false;
+      msg.textContent = progress.dataset.running;
+      msg.className = "msg msg-warn";
+      if (startBtn) startBtn.disabled = true;
+      const tick = async () => {
+        try {
+          const resp = await fetch(progress.dataset.statusUrl, { cache: "no-store" });
+          if (resp.redirected || !resp.ok) throw new Error("not ready");
+          const st = await resp.json();
+          logEl.textContent = st.log || "";
+          logEl.scrollTop = logEl.scrollHeight;
+          if (st.state === "done") {
+            msg.textContent = progress.dataset.done;
+            msg.className = "msg msg-ok";
+            setTimeout(() => location.reload(), st.version !== oldVersion ? 1200 : 2500);
+            return;
+          }
+          if (st.state === "failed") {
+            msg.textContent = progress.dataset.failed;
+            msg.className = "msg msg-error";
+            if (startBtn) startBtn.disabled = false;
+            return;
+          }
+        } catch (err) { /* Wallmox is restarting, keep waiting */ }
+        setTimeout(tick, 2000);
+      };
+      tick();
+    };
+
+    if (progress.dataset.active) follow();
+    if (startBtn) {
+      startBtn.addEventListener("click", async () => {
+        if (!confirm(startBtn.dataset.confirm)) return;
+        const body = new FormData();
+        body.append("csrf", startBtn.dataset.csrf);
+        try {
+          const resp = await fetch(startBtn.dataset.url, {
+            method: "POST", body, headers: { "X-CSRF-Token": startBtn.dataset.csrf },
+          });
+          const data = await resp.json();
+          if (data.ok) follow();
+          else { msg.textContent = data.message || ""; msg.className = "msg"; progress.hidden = false; }
+        } catch (err) { follow(); }
+      });
+    }
+  }
+
   // Copy buttons.
   document.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.addEventListener("click", async () => {

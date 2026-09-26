@@ -34,6 +34,10 @@ def poller():
     return current_app.extensions["wallmox_poller"]
 
 
+def updates():
+    return current_app.extensions["wallmox_updates"]
+
+
 def throttle() -> Throttle:
     return current_app.extensions.setdefault("wallmox_throttle", Throttle())
 
@@ -198,12 +202,14 @@ def logout():
 def settings():
     c = cfg()
     nodes, storages = known_names()
+    updates().check_in_background()
     return render_template(
         "admin/settings.html", S=g.S, cfg=c, version=__version__,
         languages=[(code, LANGUAGE_NAMES[code]) for code in LANGUAGES],
         nodes=nodes, storages=storages,
         tablet_url=status_url(), preview_url=status_url(external=False),
         agent_cmd=agent_command(c), agents=agent_rows(c, g.S),
+        upd=updates().info(), upd_state=updates().state(),
         settings_file=settings_path(c))
 
 
@@ -293,6 +299,28 @@ def status_key():
 def agent_key():
     cfg().agent_key = secrets.token_urlsafe(24)
     return saved("temps")
+
+
+@bp.route("/update/check", methods=["POST"])
+@login_required
+def update_check():
+    updates().check(force=True)
+    return redirect(url_for("admin.settings") + "#update")
+
+
+@bp.route("/update/start", methods=["POST"])
+@login_required
+def update_start():
+    info = updates().info()
+    if not (info["newer"] and info["can_update"]):
+        return jsonify({"ok": False, "message": g.S["upd_uptodate"]})
+    return jsonify({"ok": updates().request()})
+
+
+@bp.route("/update/status")
+@login_required
+def update_status():
+    return jsonify(updates().state())
 
 
 @bp.route("/password", methods=["POST"])

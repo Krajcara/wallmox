@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Updates from the admin panel. The panel checks GitHub for new releases, shows
+  what is new and updates with one click, following the log live. The page
+  reloads by itself when Wallmox is back.
+- A "New version" badge in the admin panel's top bar.
+- The web app never runs as root: it only leaves a request file, and a systemd
+  path unit starts the same `update` command you would type in the console
+  (settings backup and automatic rollback included).
+
 ## 0.3.1
 
 - Fixed: the installer stopped with "No module named wallmox" when setting the
