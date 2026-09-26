@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1
+
+- Fixed: the installer stopped with "No module named wallmox" when setting the
+  admin password. The app now works from any directory.
+- New `wallmox` command in the container, e.g. `wallmox set-password`.
+- The example config no longer contains a placeholder Proxmox connection.
+- The installer prints an error only once.
+
 ## 0.3.0
 
 - Temperatures. A small read-only agent (`agent/`) runs on each Proxmox node and

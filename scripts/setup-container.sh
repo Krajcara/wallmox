@@ -29,6 +29,18 @@ fi
 [[ -x "$APP_DIR/venv/bin/python" ]] || python3 -m venv "$APP_DIR/venv"
 "$APP_DIR/venv/bin/pip" install -q --upgrade pip
 "$APP_DIR/venv/bin/pip" install -q -r "$APP_DIR/requirements.txt"
+# make "python -m wallmox" work from any directory, not only from $APP_DIR
+SITE="$("$APP_DIR/venv/bin/python" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+echo "$APP_DIR" > "$SITE/wallmox-app.pth"
+
+# "wallmox" command: runs the app's CLI as the wallmox user, e.g. "wallmox set-password"
+cat > /usr/bin/wallmox <<EOF
+#!/bin/sh
+# Wallmox command line. Example: wallmox set-password
+exec runuser -u wallmox -- env WALLMOX_CONFIG=$CONF_DIR/config.toml WALLMOX_DATA=$DATA_DIR \\
+  "$APP_DIR/venv/bin/python" -m wallmox "\$@"
+EOF
+chmod 755 /usr/bin/wallmox
 
 install -m 644 "$APP_DIR/systemd/wallmox.service" /etc/systemd/system/wallmox.service
 

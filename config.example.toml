@@ -1,8 +1,8 @@
-# Wallmox configuration
-# Copy to /etc/wallmox/config.toml and fill in the [proxmox] section.
+# Wallmox configuration: /etc/wallmox/config.toml
 #
-# These are starting values. Once you save something in the admin panel,
-# the panel's settings (/var/lib/wallmox/settings.json) take precedence.
+# These are starting values. Everything here can also be changed in the admin
+# panel, and once you save something there, the panel's settings
+# (/var/lib/wallmox/settings.json) take precedence over this file.
 
 title = "Wallmox"
 language = "en"          # "en" or "sr"
@@ -11,7 +11,7 @@ port = 8080
 
 poll_interval = 5        # seconds between Proxmox API reads
 refresh_interval = 10    # seconds between screen updates on the tablet
-history_size = 72        # CPU trend samples (72 x 5 s = 6 minutes)
+history_size = 72        # trend samples (72 x 5 s = 6 minutes)
 
 # Optional: require http://<ip>:8080/status?key=... on the tablet
 status_key = ""
@@ -22,15 +22,16 @@ behind_proxy = false
 # Show generated data instead of talking to Proxmox
 demo = false
 
-[proxmox]
-host = "192.168.1.10"            # any node of the cluster
-port = 8006
-token_id = "wallmox@pve!dash"
-token_secret = "00000000-0000-0000-0000-000000000000"
-verify_ssl = false               # true, false, or a path to a CA file
-timeout = 5
+# The Proxmox connection is easiest to set up in the admin panel.
+# To set it here instead, remove the # signs:
+# [proxmox]
+# host = "192.168.0.20"            # any node of the cluster
+# port = 8006
+# token_id = "wallmox@pve!wallmox"
+# token_secret = "00000000-0000-0000-0000-000000000000"
+# verify_ssl = false               # true, false, or a path to a CA file
 
-# Colors switch to amber at "warn" and red at "crit" (percent)
+# Colors switch to amber at "warn" and red at "crit"
 [thresholds.cpu]
 warn = 70
 crit = 90
@@ -42,3 +43,11 @@ crit = 92
 [thresholds.storage]
 warn = 80
 crit = 90
+
+[thresholds.cpu_temp]      # degrees Celsius
+warn = 70
+crit = 85
+
+[thresholds.disk_temp]     # degrees Celsius
+warn = 55
+crit = 65

@@ -103,7 +103,7 @@ Open `http://<container-ip>:8080/admin`. There you can:
 Forgot the password? In the container run:
 
 ```bash
-runuser -u wallmox -- /opt/wallmox/venv/bin/python -m wallmox set-password
+wallmox set-password
 ```
 
 ## Updating
@@ -126,7 +126,7 @@ The `update` command does not exist in 0.1 yet. Run this once in the container:
 ```bash
 cd /opt/wallmox && git pull
 bash scripts/setup-container.sh
-runuser -u wallmox -- /opt/wallmox/venv/bin/python -m wallmox set-password
+wallmox set-password
 systemctl restart wallmox
 ```
 
@@ -147,7 +147,7 @@ In a Debian 12 or 13 container:
 apt update && apt install -y git python3 python3-venv
 git clone https://github.com/krajcara/wallmox.git /opt/wallmox
 bash /opt/wallmox/scripts/setup-container.sh
-runuser -u wallmox -- /opt/wallmox/venv/bin/python -m wallmox set-password
+wallmox set-password
 systemctl start wallmox
 ```
 

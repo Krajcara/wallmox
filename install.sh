@@ -35,7 +35,10 @@ warn() { printf '    %s!%s %s\n' "$C_WARN" "$C_0" "$*"; }
 die()  { printf '%sError:%s %s\n' "$C_ERR" "$C_0" "$*" >&2; exit 1; }
 
 CREATED_CT=""
+ERROR_SHOWN=0
 on_error() {
+  [[ $ERROR_SHOWN -eq 1 ]] && return
+  ERROR_SHOWN=1
   printf '\n%sThe installer stopped at line %s.%s\n' "$C_ERR" "$1" "$C_0" >&2
   if [[ -n "$CREATED_CT" ]]; then
     printf 'Container %s was created. Remove it with:  pct stop %s; pct destroy %s\n' \
@@ -339,9 +342,7 @@ rm -f "$CONF_TMP"
 ct chown root:wallmox /etc/wallmox/config.toml
 
 ADMIN_PASS="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
-printf '%s\n' "$ADMIN_PASS" | ct runuser -u wallmox -- \
-  env WALLMOX_CONFIG=/etc/wallmox/config.toml WALLMOX_DATA=/var/lib/wallmox \
-  "$APP_DIR/venv/bin/python" -m wallmox set-password --stdin >/dev/null
+printf '%s\n' "$ADMIN_PASS" | ct /usr/bin/wallmox set-password --stdin >/dev/null
 ct systemctl restart wallmox
 ok "Admin password set, service started"
 
