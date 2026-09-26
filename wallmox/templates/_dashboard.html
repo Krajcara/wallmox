@@ -37,6 +37,7 @@
         </div>
         {% endif %}
 
+        {% if n.show_storage %}
         <div class="storage">
           {% for s in n.storage %}
           <div class="st st-{{ s.level }}">
@@ -50,13 +51,15 @@
           <p class="muted">{{ S.no_storage }}</p>
           {% endfor %}
         </div>
+        {% endif %}
       </div>
     </div>
 
+    {% if n.show_guests %}
     <div class="guests">
       <div class="row-label">
         <span>{{ S.guests }}</span>
-        <span class="muted">{{ n.guests_running }} {{ S.running }}, {{ n.guests_total - n.guests_running }} {{ S.stopped }}</span>
+        <span class="muted">{{ n.guests_running }} {{ S.running }}, {{ n.guests_stopped }} {{ S.stopped }}</span>
       </div>
       <ul class="chips">
         {% for g in n.guest_chips %}
@@ -67,6 +70,7 @@
         {% if n.guests_hidden %}<li class="chip chip-more">{{ S.more.format(n=n.guests_hidden) }}</li>{% endif %}
       </ul>
     </div>
+    {% endif %}
     {% endif %}
   </section>
 {% endfor %}

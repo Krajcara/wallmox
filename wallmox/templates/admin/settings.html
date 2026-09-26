@@ -1,0 +1,208 @@
+{% extends "admin/base.html" %}
+{% macro toggle(name, label, checked, hint=None) -%}
+<label class="toggle">
+  <input type="checkbox" name="{{ name }}" {% if checked %}checked{% endif %}>
+  <span class="toggle-track" aria-hidden="true"></span>
+  <span class="toggle-text">{{ label }}{% if hint %}<small>{{ hint }}</small>{% endif %}</span>
+</label>
+{%- endmacro %}
+{% macro field(name, label, value, type="text", hint=None, attrs="") -%}
+<label class="field">
+  <span class="field-label">{{ label }}</span>
+  <input type="{{ type }}" name="{{ name }}" value="{{ value }}" {{ attrs|safe }}>
+  {% if hint %}<small class="field-hint">{{ hint }}</small>{% endif %}
+</label>
+{%- endmacro %}
+{% set csrf = csrf_token() %}
+
+{% block body %}
+<header class="topbar">
+  <a class="brand" href="{{ url_for('admin.settings') }}">{% include "admin/_logo.html" %}<span>{{ cfg.title }}</span></a>
+  <nav class="sections" aria-label="{{ S.admin_title }}">
+    <a href="#general">{{ S.sec_general }}</a>
+    <a href="#display">{{ S.sec_display }}</a>
+    <a href="#thresholds">{{ S.sec_thresholds }}</a>
+    <a href="#proxmox">{{ S.sec_proxmox }}</a>
+    <a href="#security">{{ S.sec_security }}</a>
+  </nav>
+  <div class="topbar-actions">
+    <a class="btn" href="{{ preview_url }}" target="_blank" rel="noopener">{{ S.open_status }}</a>
+    <form method="post" action="{{ url_for('admin.logout') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn btn-quiet" type="submit">{{ S.sign_out }}</button>
+    </form>
+  </div>
+</header>
+
+<div class="layout">
+  <main class="forms">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <p class="msg msg-{{ cat }}" role="status">{{ msg }}</p>
+      {% endfor %}
+    {% endwith %}
+    {% if cfg.demo %}<p class="msg msg-warn">{{ S.demo_mode }}</p>{% endif %}
+
+    <section class="panel" id="general">
+      <h2>{{ S.sec_general }}</h2>
+      <form method="post" action="{{ url_for('admin.save', section='general') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="grid-2">
+          {{ field("title", S.f_title, cfg.title, attrs='maxlength="40"') }}
+          <label class="field">
+            <span class="field-label">{{ S.f_language }}</span>
+            <select name="language">
+              {% for code, name in languages %}
+              <option value="{{ code }}" {% if code == cfg.language %}selected{% endif %}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          {{ field("refresh_interval", S.f_refresh, cfg.refresh_interval, "number", attrs='min="3" max="300"') }}
+          {{ field("poll_interval", S.f_poll, cfg.poll_interval, "number", attrs='min="2" max="300"') }}
+        </div>
+        <div class="actions"><button class="btn btn-primary" type="submit">{{ S.save }}</button></div>
+      </form>
+    </section>
+
+    <section class="panel" id="display">
+      <h2>{{ S.sec_display }}</h2>
+      <form method="post" action="{{ url_for('admin.save', section='display') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="toggles">
+          {{ toggle("show_trend", S.d_trend, cfg.display.show_trend) }}
+          {{ toggle("show_storage", S.d_storage, cfg.display.show_storage) }}
+          {{ toggle("show_guests", S.d_guests, cfg.display.show_guests) }}
+          {{ toggle("show_stopped_guests", S.d_stopped, cfg.display.show_stopped_guests) }}
+          {{ toggle("show_cpu_model", S.d_cpu_model, cfg.display.show_cpu_model) }}
+        </div>
+
+        {% if nodes or storages %}
+        <p class="field-hint lists-hint">{{ S.d_hint_lists }}</p>
+        <div class="grid-2">
+          <fieldset class="checklist">
+            <legend>{{ S.d_nodes }}</legend>
+            {% for n in nodes %}
+            <input type="hidden" name="known_node" value="{{ n }}">
+            <label><input type="checkbox" name="node" value="{{ n }}" {% if n not in cfg.display.hidden_nodes %}checked{% endif %}> {{ n }}</label>
+            {% endfor %}
+          </fieldset>
+          <fieldset class="checklist">
+            <legend>{{ S.d_storages }}</legend>
+            {% for s in storages %}
+            <input type="hidden" name="known_storage" value="{{ s }}">
+            <label><input type="checkbox" name="storage" value="{{ s }}" {% if s not in cfg.display.hidden_storages %}checked{% endif %}> {{ s }}</label>
+            {% endfor %}
+          </fieldset>
+        </div>
+        {% else %}
+        <p class="field-hint lists-hint">{{ S.d_empty_lists }}</p>
+        {% endif %}
+        <div class="actions"><button class="btn btn-primary" type="submit">{{ S.save }}</button></div>
+      </form>
+    </section>
+
+    <section class="panel" id="thresholds">
+      <h2>{{ S.sec_thresholds }}</h2>
+      <form method="post" action="{{ url_for('admin.save', section='thresholds') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <table class="levels">
+          <thead><tr><th></th><th><span class="swatch swatch-warn"></span>{{ S.th_warn }}</th><th><span class="swatch swatch-crit"></span>{{ S.th_crit }}</th></tr></thead>
+          <tbody>
+          {% for name, label in (("cpu", S.cpu), ("mem", S.ram), ("storage", S.storage)) %}
+            {% set th = cfg.thresholds[name] %}
+            <tr>
+              <th scope="row">{{ label }}</th>
+              <td><input type="number" name="{{ name }}_warn" value="{{ th.warn|round|int }}" min="1" max="100" aria-label="{{ label }} {{ S.th_warn }}"></td>
+              <td><input type="number" name="{{ name }}_crit" value="{{ th.crit|round|int }}" min="1" max="100" aria-label="{{ label }} {{ S.th_crit }}"></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <div class="actions"><button class="btn btn-primary" type="submit">{{ S.save }}</button></div>
+      </form>
+    </section>
+
+    <section class="panel" id="proxmox">
+      <h2>{{ S.sec_proxmox }}</h2>
+      <form method="post" action="{{ url_for('admin.save', section='proxmox') }}" id="proxmox-form">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="grid-2 grid-host">
+          {{ field("host", S.f_host, cfg.proxmox.host, hint=S.h_host, attrs='autocomplete="off" spellcheck="false"') }}
+          {{ field("port", S.f_port, cfg.proxmox.port, "number", attrs='min="1" max="65535"') }}
+        </div>
+        {{ field("token_id", S.f_token_id, cfg.proxmox.token_id, attrs='autocomplete="off" spellcheck="false" placeholder="wallmox@pve!dash"') }}
+        {{ field("token_secret", S.f_token_secret, "", "password", hint=S.h_token_secret, attrs='autocomplete="new-password" placeholder="' ~ ('••••••••' if cfg.proxmox.token_secret else '') ~ '"') }}
+        <div class="toggles">
+          {{ toggle("verify_ssl", S.f_verify_ssl, cfg.proxmox.verify_ssl is sameas true or cfg.proxmox.verify_ssl is string, S.h_verify_ssl) }}
+        </div>
+        <p class="test-result" id="test-result" role="status" hidden></p>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit">{{ S.save }}</button>
+          <button class="btn" type="button" id="test-btn"
+                  data-url="{{ url_for('admin.test_proxmox') }}"
+                  data-busy="{{ S.testing }}">{{ S.test_connection }}</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel" id="security">
+      <h2>{{ S.sec_security }}</h2>
+
+      <div class="subsection">
+        <h3>{{ S.f_status_key }}</h3>
+        <p class="field-hint">{{ S.h_status_key }}</p>
+        <div class="url-row">
+          <span class="field-label">{{ S.tablet_url }}</span>
+          <div class="copy">
+            <input type="text" readonly value="{{ tablet_url }}" id="tablet-url">
+            <button class="btn" type="button" data-copy="tablet-url" data-done="{{ S.copied }}">{{ S.copy_btn }}</button>
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('admin.status_key') }}" class="actions">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn" type="submit" name="action" value="new">{{ S.new_key }}</button>
+          {% if cfg.status_key %}<button class="btn btn-quiet" type="submit" name="action" value="remove">{{ S.remove_key }}</button>{% endif %}
+        </form>
+      </div>
+
+      <div class="subsection">
+        <form method="post" action="{{ url_for('admin.save', section='security') }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="toggles">{{ toggle("behind_proxy", S.f_behind_proxy, cfg.behind_proxy, S.h_behind_proxy) }}</div>
+          <div class="actions"><button class="btn btn-primary" type="submit">{{ S.save }}</button></div>
+        </form>
+      </div>
+
+      <div class="subsection">
+        <h3>{{ S.change_password }}</h3>
+        <form method="post" action="{{ url_for('admin.password') }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="grid-2">
+            {{ field("current_password", S.f_current_password, "", "password", attrs='autocomplete="current-password" required') }}
+            {{ field("new_password", S.f_new_password, "", "password", hint=S.h_new_password, attrs='autocomplete="new-password" minlength="8" required') }}
+          </div>
+          <div class="actions"><button class="btn btn-primary" type="submit">{{ S.change_password }}</button></div>
+        </form>
+      </div>
+    </section>
+
+    <footer class="about">
+      <span>Wallmox {{ S.version|lower }} {{ version }}</span>
+      <a href="https://github.com/krajcara/wallmox" rel="noopener" target="_blank">github.com/krajcara/wallmox</a>
+      <span>{{ S.update_hint }}</span>
+      <span class="muted">{{ S.settings_file }}: {{ settings_file }}</span>
+    </footer>
+  </main>
+
+  <aside class="preview" aria-label="{{ S.preview }}">
+    <div class="preview-sticky">
+      <p class="preview-label">{{ S.preview }} <span class="muted">1024 × 600</span></p>
+      <div class="bezel">
+        <div class="screen" id="preview-screen">
+          <iframe src="{{ preview_url }}" title="{{ S.preview }}" tabindex="-1" loading="lazy"></iframe>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

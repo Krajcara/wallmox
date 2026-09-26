@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ S.login_title }}{% endblock %}
+{% block body_class %}page-login{% endblock %}
+{% block body %}
+<main class="login">
+  <div class="login-brand">{% include "admin/_logo.html" %}<span>{{ cfg.title }}</span></div>
+  <h1>{{ S.login_title }}</h1>
+  {% if not has_password %}
+    <p class="msg msg-error">{{ S.no_password }}</p>
+    <pre class="cmd">runuser -u wallmox -- /opt/wallmox/venv/bin/python -m wallmox set-password</pre>
+  {% else %}
+    {% if error %}<p class="msg msg-error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <label class="field">
+        <span class="field-label">{{ S.password }}</span>
+        <input type="password" name="password" autocomplete="current-password" autofocus required>
+      </label>
+      <button class="btn btn-primary btn-wide" type="submit">{{ S.sign_in }}</button>
+    </form>
+  {% endif %}
+  <p class="login-foot"><a href="{{ url_for('status') }}">{{ S.open_status }}</a></p>
+</main>
+{% endblock %}

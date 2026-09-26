@@ -1,5 +1,8 @@
 # Wallmox configuration
 # Copy to /etc/wallmox/config.toml and fill in the [proxmox] section.
+#
+# These are starting values. Once you save something in the admin panel,
+# the panel's settings (/var/lib/wallmox/settings.json) take precedence.
 
 title = "Wallmox"
 language = "en"          # "en" or "sr"
@@ -12,6 +15,9 @@ history_size = 72        # CPU trend samples (72 x 5 s = 6 minutes)
 
 # Optional: require http://<ip>:8080/status?key=... on the tablet
 status_key = ""
+
+# Set to true when Wallmox is reached through NPM, Caddy or Traefik
+behind_proxy = false
 
 # Show generated data instead of talking to Proxmox
 demo = false

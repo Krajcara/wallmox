@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="{{ cfg.language }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{% block title %}{{ S.admin_title }}{% endblock %} – {{ cfg.title }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}?v={{ version }}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+{% block body %}{% endblock %}
+<script src="{{ url_for('static', filename='admin.js') }}?v={{ version }}"></script>
+</body>
+</html>

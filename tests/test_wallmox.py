@@ -72,6 +72,7 @@ def test_collect_node_error_is_kept_per_node():
 
 def test_view_marks_stale_data():
     cfg = Config()
+    cfg.proxmox.host, cfg.proxmox.token_id, cfg.proxmox.token_secret = "h", "t", "s"
     snap = collect(FakeClient())
     state = {"snapshot": snap, "error": "down", "last_ok": time.time() - 120, "history": {}}
     view = build_view(state, cfg, strings("sr"))
@@ -80,10 +81,11 @@ def test_view_marks_stale_data():
 
 
 @pytest.fixture
-def client():
+def client(tmp_path):
     cfg = Config()
     cfg.demo = True
     cfg.status_key = "secret"
+    cfg.data_dir = str(tmp_path)
     app = create_app(cfg, start_poller=False)
     app.extensions["wallmox_poller"].poll_once()
     return app.test_client()

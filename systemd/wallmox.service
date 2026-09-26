@@ -9,6 +9,9 @@ User=wallmox
 Group=wallmox
 WorkingDirectory=/opt/wallmox
 Environment=WALLMOX_CONFIG=/etc/wallmox/config.toml
+Environment=WALLMOX_DATA=/var/lib/wallmox
+StateDirectory=wallmox
+StateDirectoryMode=0750
 ExecStart=/opt/wallmox/venv/bin/python -m wallmox
 Restart=on-failure
 RestartSec=5

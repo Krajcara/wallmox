@@ -7,6 +7,8 @@ which keeps it working on Android 4.4 browsers.
 import math
 import time
 
+from .config import proxmox_ready
+
 GAUGE_CENTER = 65
 GAUGE_R = 48          # value arc
 ZONE_R = 58           # thin outer ring that marks warn/crit zones
@@ -110,6 +112,11 @@ def build_view(state: dict, cfg, S: dict) -> dict:
     snap = state["snapshot"]
     now = time.time()
     view = {"nodes": [], "banner": None, "stale": False}
+    disp = cfg.display
+
+    if not cfg.demo and not proxmox_ready(cfg):
+        view["banner"] = {"level": "warn", "title": S["not_configured"], "detail": ""}
+        return view
 
     if snap is None:
         view["banner"] = {"level": "warn" if not state["error"] else "crit",
@@ -127,14 +134,18 @@ def build_view(state: dict, cfg, S: dict) -> dict:
 
     th = cfg.thresholds
     spark_minutes = round(cfg.history_size * cfg.poll_interval / 60)
+    hidden_nodes = set(disp.hidden_nodes)
+    hidden_storages = set(disp.hidden_storages)
     for n in snap["nodes"]:
+        if n["name"] in hidden_nodes:
+            continue
         node = {
             "name": n["name"],
             "online": n["online"],
             "error": n.get("error"),
             "uptime": fmt_duration(n["uptime"]),
             "cores": n["cores"],
-            "cpu_model": n["cpu_model"],
+            "cpu_model": n["cpu_model"] if disp.show_cpu_model else "",
             "load": " ".join(f"{x:.2f}" for x in n["loadavg"]),
         }
         if not n["online"]:
@@ -151,21 +162,28 @@ def build_view(state: dict, cfg, S: dict) -> dict:
             "pct": s["pct"], "width": max(1.5, min(100.0, s["pct"])),
             "level": level(s["pct"], th["storage"]),
             "text": f"{fmt_bytes(s['used'])} {S['of']} {fmt_bytes(s['total'])}",
-        } for s in n["storage"]]
+        } for s in n["storage"] if s["name"] not in hidden_storages]
+        node["show_storage"] = disp.show_storage
+        node["show_guests"] = disp.show_guests
 
-        spark = sparkline(state["history"].get((n["name"], "cpu"), []), cfg.history_size)
+        spark = None
+        if disp.show_trend:
+            spark = sparkline(state["history"].get((n["name"], "cpu"), []), cfg.history_size)
         node["spark"] = spark
         node["spark_label"] = S["last_hour"].format(min=spark_minutes)
 
         guests = n["guests"]
+        if not disp.show_stopped_guests:
+            guests = [g for g in guests if g["running"]]
         running = sum(1 for g in guests if g["running"])
-        node["guests_total"] = len(guests)
+        node["guests_total"] = len(n["guests"])
+        node["guests_stopped"] = len(n["guests"]) - running
         node["guests_running"] = running
         node["guest_chips"] = guests[:MAX_GUEST_CHIPS]
         node["guests_hidden"] = max(0, len(guests) - MAX_GUEST_CHIPS)
 
         node["level"] = worst([node["cpu_gauge"]["level"], node["mem_gauge"]["level"]]
-                              + [s["level"] for s in node["storage"]]
+                              + ([s["level"] for s in node["storage"]] if disp.show_storage else [])
                               + (["warn"] if node["error"] else []))
         view["nodes"].append(node)
     return view

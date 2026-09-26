@@ -16,10 +16,33 @@ Android 4.4 browsers.
 - VMs and containers, running ones first
 - A banner when Proxmox stops answering, so old numbers never pass as current
 
-> Status: **v0.1**. Installer, admin panel, temperatures and in-app updates
-> are coming in the next releases (see [Roadmap](#roadmap)).
+Everything is set up in an admin panel on the same address, including a live
+preview of the tablet screen.
 
-## Try it in 30 seconds
+![Wallmox admin panel](docs/admin.png)
+
+## Install
+
+Open the **Shell** of a Proxmox node and run:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/krajcara/wallmox/main/install.sh)"
+```
+
+The installer:
+
+1. asks a few questions: container ID, hostname, storage, disk, memory, network
+   (DHCP or static IP with gateway), root password and DNS. Every one has a
+   default, so Enter is enough,
+2. downloads the latest Debian template,
+3. creates the user `wallmox@pve` with the read-only role **PVEAuditor** and an API token,
+4. creates an unprivileged container (1 core, 512 MB RAM, 4 GB disk),
+5. installs the newest Wallmox release in it and starts the service,
+6. prints the status page address, the admin panel address and the admin password.
+
+Wallmox never gets write access to Proxmox, and nothing is installed on the node itself.
+
+## Try it without Proxmox
 
 ```bash
 git clone https://github.com/krajcara/wallmox.git && cd wallmox
@@ -27,11 +50,62 @@ python3 -m venv venv && venv/bin/pip install -r requirements.txt
 venv/bin/python -m wallmox --demo
 ```
 
-Open `http://<your-ip>:8080/status` on the tablet.
+Open `http://<your-ip>:8080/status`. For the admin panel, set a password first
+with `venv/bin/python -m wallmox set-password`.
 
-## Manual install (v0.1)
+## Admin panel
 
-### 1. Create a read-only API token (Proxmox host shell)
+Open `http://<container-ip>:8080/admin`. There you can:
+
+- change the title, language and refresh intervals,
+- choose what the tablet shows, and hide single nodes or storages,
+- set the amber and red warning levels,
+- change and test the Proxmox connection,
+- protect the status page with a key, and set the reverse proxy option,
+- change the admin password.
+
+Forgot the password? In the container run:
+
+```bash
+runuser -u wallmox -- /opt/wallmox/venv/bin/python -m wallmox set-password
+```
+
+## Updating
+
+Open the container console in Proxmox (or run `pct enter <ID>` on the node) and run:
+
+```bash
+update
+```
+
+It installs the newest release, backs up your settings to
+`/var/lib/wallmox/backups` first, and puts the previous version back if the new
+one does not start. `update --check` only tells you whether there is a new
+version, `update --main` installs the latest development code.
+
+### Upgrading from 0.1
+
+The `update` command does not exist in 0.1 yet. Run this once in the container:
+
+```bash
+cd /opt/wallmox && git pull
+bash scripts/setup-container.sh
+runuser -u wallmox -- /opt/wallmox/venv/bin/python -m wallmox set-password
+systemctl restart wallmox
+```
+
+Your `config.toml` keeps working. Once you save something in the admin panel,
+its settings take precedence over the file. From then on, use `update`.
+
+## Releases
+
+`update` and the installer follow GitHub releases: tag a release as `vX.Y.Z`
+(matching `__version__` in `wallmox/__init__.py`) and every container picks it
+up with `update`.
+
+## Manual install
+
+If you prefer not to run the installer, create a token on the node:
 
 ```bash
 pveum user add wallmox@pve --comment "Wallmox dashboard (read-only)"
@@ -39,32 +113,23 @@ pveum acl modify / --users wallmox@pve --roles PVEAuditor
 pveum user token add wallmox@pve dash --privsep 0
 ```
 
-Copy the `value` from the last command. Proxmox shows it only once.
-
-### 2. Create the container
-
-In the Proxmox web UI create an unprivileged LXC from a Debian 12 or 13
-template: 1 core, 512 MB RAM, 4 GB disk is plenty.
-
-### 3. Install Wallmox (inside the container)
+Then in a Debian 12 or 13 container:
 
 ```bash
-apt update && apt install -y python3 python3-venv git
-useradd --system --home /opt/wallmox --shell /usr/sbin/nologin wallmox
+apt update && apt install -y git python3 python3-venv
 git clone https://github.com/krajcara/wallmox.git /opt/wallmox
-python3 -m venv /opt/wallmox/venv
-/opt/wallmox/venv/bin/pip install -r /opt/wallmox/requirements.txt
-
-mkdir -p /etc/wallmox
-cp /opt/wallmox/config.example.toml /etc/wallmox/config.toml
-chown root:wallmox /etc/wallmox/config.toml && chmod 640 /etc/wallmox/config.toml
+bash /opt/wallmox/scripts/setup-container.sh
 nano /etc/wallmox/config.toml     # host, token_id, token_secret
-
-cp /opt/wallmox/systemd/wallmox.service /etc/systemd/system/
-systemctl daemon-reload && systemctl enable --now wallmox
+runuser -u wallmox -- /opt/wallmox/venv/bin/python -m wallmox set-password
+systemctl start wallmox
 ```
 
-Check it with `systemctl status wallmox` or `journalctl -u wallmox -f`.
+## Behind a reverse proxy
+
+Wallmox serves plain HTTP on port 8080. For HTTPS, put it behind Nginx Proxy
+Manager, Caddy or Traefik, forward to `http://<container-ip>:8080`, and turn on
+**Wallmox is behind a reverse proxy** in the admin panel. Keep the admin panel
+reachable only from your own network.
 
 ## Setting up the tablet
 
@@ -77,11 +142,15 @@ Check it with `systemctl status wallmox` or `journalctl -u wallmox -f`.
 - A tablet that is always plugged in can develop a swollen battery. Check it
   from time to time.
 
-## Configuration
+## Files
 
-All settings live in `/etc/wallmox/config.toml`. See
-[`config.example.toml`](config.example.toml) for every option. After a change,
-run `systemctl restart wallmox`.
+| Path | What it is |
+|---|---|
+| `/etc/wallmox/config.toml` | Starting values written by the installer |
+| `/var/lib/wallmox/settings.json` | Everything saved in the admin panel (wins over the TOML file) |
+| `/opt/wallmox` | The app |
+
+Logs: `journalctl -u wallmox -f`.
 
 ## Browser compatibility
 
@@ -92,7 +161,7 @@ requests.
 
 ## Roadmap
 
-- **0.2** Installer run from the Proxmox host shell, admin panel for settings
+- ~~**0.2** Installer run from the Proxmox host shell, admin panel for settings~~
 - **0.3** Temperatures through a small agent on each node, longer history
 - **0.4** Updates from the admin panel with rollback
 - **1.0** Multi-node and cluster polish, documentation
@@ -102,7 +171,8 @@ requests.
 ```bash
 pip install -r requirements.txt pytest
 python -m pytest
-python -m wallmox --demo
+WALLMOX_DATA=./data python -m wallmox set-password
+WALLMOX_DATA=./data python -m wallmox --demo
 ```
 
 ## License

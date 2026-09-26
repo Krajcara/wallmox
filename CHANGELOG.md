@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.1
+
+- Installer asks for the container root password and DNS servers / search domain.
+- Installer installs the newest release instead of the main branch
+  (`WALLMOX_BRANCH=main` for the latest code).
+- New `update` command inside the container: installs the newest release,
+  backs up settings first and restores the previous version if the new one
+  does not start. `update --check` and `update --main` are available too.
+
+## 0.2.0
+
+- Installer: one command in the Proxmox node shell creates the container,
+  a read-only API token (PVEAuditor) and starts Wallmox.
+- Admin panel at `/admin` with sign-in: status page title, language and
+  intervals, what the tablet shows, hiding nodes and storages, warning levels,
+  Proxmox connection with a connection test, status page key, reverse proxy
+  option, password change, live tablet preview.
+- Settings from the admin panel are stored in `/var/lib/wallmox/settings.json`
+  and apply without a restart.
+- `python -m wallmox set-password` sets or resets the admin password.
+- Reverse proxy support (X-Forwarded-* headers) when enabled.
+- `scripts/setup-container.sh` for manual installs and upgrades.
+
 ## 0.1.0
 
 - Status page for tablets: CPU and RAM gauges with warn/crit zones, CPU trend,

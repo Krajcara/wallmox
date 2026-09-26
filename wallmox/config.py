@@ -1,13 +1,19 @@
-"""Configuration loading.
+"""Configuration.
 
-v0.1 reads a TOML file. From v0.2 the admin panel will manage settings,
-but the TOML file stays as the source for connection details.
+Two layers:
+  1. config.toml      - written once (by the installer or by hand), read-only for the app
+  2. settings.json    - everything changed in the admin panel, stored in the data dir
+
+settings.json wins over config.toml, so the admin panel can change any
+editable value without touching the TOML file.
 """
 
+import json
 import logging
 import os
 import sys
-from dataclasses import dataclass, field
+import tempfile
+from dataclasses import asdict, dataclass, field
 
 if sys.version_info < (3, 11):
     sys.exit("Wallmox needs Python 3.11 or newer (Debian 12+).")
@@ -17,6 +23,8 @@ import tomllib
 log = logging.getLogger(__name__)
 
 SEARCH_PATHS = ["/etc/wallmox/config.toml", "config.toml"]
+DEFAULT_DATA_DIRS = ["/var/lib/wallmox", "data"]
+SETTINGS_FILE = "settings.json"
 
 
 @dataclass
@@ -35,6 +43,17 @@ class Threshold:
     crit: float
 
 
+@dataclass
+class Display:
+    show_trend: bool = True
+    show_storage: bool = True
+    show_guests: bool = True
+    show_stopped_guests: bool = True
+    show_cpu_model: bool = True
+    hidden_nodes: list = field(default_factory=list)
+    hidden_storages: list = field(default_factory=list)
+
+
 def _default_thresholds() -> dict:
     return {
         "cpu": Threshold(70, 90),
@@ -51,12 +70,26 @@ class Config:
     language: str = "en"
     poll_interval: int = 5        # seconds between Proxmox API polls
     refresh_interval: int = 10    # seconds between tablet screen updates
-    history_size: int = 72        # samples kept for the CPU/RAM sparklines
+    history_size: int = 72        # samples kept for the CPU sparkline
     status_key: str = ""          # optional: require ?key=... on the status page
+    behind_proxy: bool = False    # trust X-Forwarded-* headers from a reverse proxy
     demo: bool = False
     proxmox: ProxmoxConfig = field(default_factory=ProxmoxConfig)
     thresholds: dict = field(default_factory=_default_thresholds)
+    display: Display = field(default_factory=Display)
+    # security, kept only in settings.json
+    admin_password_hash: str = ""
+    secret_key: str = ""
+    # where things came from
     source_path: str = ""
+    data_dir: str = ""
+
+
+# Values the admin panel may change. Anything else stays TOML-only.
+EDITABLE_TOP = ("title", "language", "poll_interval", "refresh_interval",
+                "status_key", "behind_proxy")
+EDITABLE_PROXMOX = ("host", "port", "token_id", "token_secret", "verify_ssl")
+LANGUAGES = ("en", "sr")
 
 
 def find_config(explicit: str | None = None) -> str | None:
@@ -69,43 +102,102 @@ def find_config(explicit: str | None = None) -> str | None:
     return None
 
 
-def load_config(path: str | None = None) -> Config:
-    found = find_config(path)
-    cfg = Config()
-    if not found:
-        log.warning("No config file found, starting in demo mode.")
-        cfg.demo = True
-        return cfg
+def find_data_dir() -> str:
+    env = os.environ.get("WALLMOX_DATA")
+    if env:
+        return env
+    for path in DEFAULT_DATA_DIRS:
+        if os.path.isdir(path) and os.access(path, os.W_OK):
+            return path
+    return os.path.abspath("data")
 
-    with open(found, "rb") as fh:
-        raw = tomllib.load(fh)
-    cfg.source_path = found
 
+def _apply(cfg: Config, raw: dict) -> None:
+    """Copy known keys from a parsed TOML or JSON dict onto cfg."""
     for key in ("listen", "port", "title", "language", "poll_interval",
-                "refresh_interval", "history_size", "status_key", "demo"):
+                "refresh_interval", "history_size", "status_key",
+                "behind_proxy", "demo", "admin_password_hash", "secret_key"):
         if key in raw:
             setattr(cfg, key, raw[key])
 
-    px = raw.get("proxmox", {})
-    for key in ("host", "port", "token_id", "token_secret", "verify_ssl", "timeout"):
-        if key in px:
-            setattr(cfg.proxmox, key, px[key])
+    for key, value in (raw.get("proxmox") or {}).items():
+        if hasattr(cfg.proxmox, key):
+            setattr(cfg.proxmox, key, value)
 
-    for name, values in raw.get("thresholds", {}).items():
-        if name in cfg.thresholds:
-            cfg.thresholds[name] = Threshold(
-                float(values.get("warn", cfg.thresholds[name].warn)),
-                float(values.get("crit", cfg.thresholds[name].crit)),
-            )
+    for name, values in (raw.get("thresholds") or {}).items():
+        if name in cfg.thresholds and isinstance(values, dict):
+            cur = cfg.thresholds[name]
+            cfg.thresholds[name] = Threshold(float(values.get("warn", cur.warn)),
+                                             float(values.get("crit", cur.crit)))
 
+    for key, value in (raw.get("display") or {}).items():
+        if hasattr(cfg.display, key):
+            setattr(cfg.display, key, value)
+
+
+def normalize(cfg: Config) -> None:
     cfg.poll_interval = max(2, int(cfg.poll_interval))
     cfg.refresh_interval = max(3, int(cfg.refresh_interval))
     cfg.history_size = max(10, int(cfg.history_size))
+    cfg.proxmox.port = int(cfg.proxmox.port)
+    if cfg.language not in LANGUAGES:
+        cfg.language = "en"
+    for th in cfg.thresholds.values():
+        th.warn = max(0.0, min(100.0, float(th.warn)))
+        th.crit = max(th.warn, min(100.0, float(th.crit)))
 
-    if not cfg.demo:
-        missing = [k for k in ("host", "token_id", "token_secret")
-                   if not getattr(cfg.proxmox, k)]
-        if missing:
-            raise ValueError(
-                f"{found}: missing [proxmox] settings: {', '.join(missing)}")
+
+def proxmox_ready(cfg: Config) -> bool:
+    px = cfg.proxmox
+    return bool(px.host and px.token_id and px.token_secret)
+
+
+def settings_path(cfg: Config) -> str:
+    return os.path.join(cfg.data_dir, SETTINGS_FILE)
+
+
+def load_config(path: str | None = None) -> Config:
+    cfg = Config()
+    cfg.data_dir = find_data_dir()
+
+    found = find_config(path)
+    if found:
+        with open(found, "rb") as fh:
+            _apply(cfg, tomllib.load(fh))
+        cfg.source_path = found
+
+    sp = settings_path(cfg)
+    if os.path.isfile(sp):
+        with open(sp, encoding="utf-8") as fh:
+            _apply(cfg, json.load(fh))
+
+    normalize(cfg)
+    if not found and not os.path.isfile(sp):
+        log.warning("No config found, starting in demo mode.")
+        cfg.demo = True
+    elif not cfg.demo and not proxmox_ready(cfg):
+        log.warning("Proxmox connection is not configured yet. "
+                    "Set it up in the admin panel.")
     return cfg
+
+
+def save_settings(cfg: Config) -> None:
+    """Write every editable value to settings.json (atomic, mode 600)."""
+    data = {key: getattr(cfg, key) for key in EDITABLE_TOP}
+    data["proxmox"] = {key: getattr(cfg.proxmox, key) for key in EDITABLE_PROXMOX}
+    data["thresholds"] = {name: asdict(th) for name, th in cfg.thresholds.items()}
+    data["display"] = asdict(cfg.display)
+    data["admin_password_hash"] = cfg.admin_password_hash
+    data["secret_key"] = cfg.secret_key
+
+    os.makedirs(cfg.data_dir, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=cfg.data_dir, prefix=".settings-")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2, ensure_ascii=False)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, settings_path(cfg))
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
