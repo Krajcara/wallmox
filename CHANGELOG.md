@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+- `update` and the installer accept release tags written as `V1.2.3` as well as `v1.2.3`.
+- `update` forgets tags that were deleted on GitHub, so a release that was made
+  twice no longer confuses it.
+
 ## 0.4.0
 
 - Updates from the admin panel. The panel checks GitHub for new releases, shows

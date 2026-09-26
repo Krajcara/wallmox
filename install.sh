@@ -314,7 +314,7 @@ ct git clone -q "$REPO" "$APP_DIR"
 ct bash -c '
   cd "$1" || exit 1
   ref="$2"
-  [ -n "$ref" ] || ref=$(git tag -l "v*" --sort=-v:refname | head -n1)
+  [ -n "$ref" ] || ref=$(git tag -l "[vV][0-9]*" | sed "s/^[vV]\(.*\)$/\1 &/" | sort -V | tail -n1 | cut -d" " -f2)
   [ -n "$ref" ] || ref=main
   git -c advice.detachedHead=false checkout -q --detach "$ref" 2>/dev/null \
     || git -c advice.detachedHead=false checkout -q --detach "origin/$ref"

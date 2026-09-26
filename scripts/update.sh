@@ -67,11 +67,13 @@ PY
 }
 
 step "Checking for updates"
-git fetch -q --tags --force origin
+# --prune-tags drops local tags that were deleted on GitHub (e.g. a release made twice)
+git fetch -q --tags --force --prune --prune-tags origin
 CURRENT_REF="$(git rev-parse HEAD)"
 CURRENT_VER="$(version_of HEAD)"
 
-LATEST_TAG="$(git tag -l 'v*' --sort=-v:refname | head -n1 || true)"
+# newest release tag, "v1.2.3" or "V1.2.3"
+LATEST_TAG="$(git tag -l '[vV][0-9]*' | sed 's/^[vV]\(.*\)$/\1 &/' | sort -V | tail -n1 | cut -d' ' -f2 || true)"
 if [[ "$MODE" == "main" || -z "$LATEST_TAG" ]]; then
   TARGET="origin/main"
 else
