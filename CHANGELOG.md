@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+- Screen helper: follows redirects (e.g. http to https behind a reverse proxy),
+  accepts only a real schedule and writes a clear message to the log when it
+  cannot get one. Before, a redirect left the screen at day brightness without
+  any message. Update it by running the install command on the tablet again.
+
 ## 0.5.0
 
 - SATA drive temperatures. The agent installer loads the kernel's `drivetemp`

@@ -25,19 +25,26 @@ MAX="$(cat "$BL/max_brightness")"
 # last known schedule, used while Wallmox cannot be reached
 ENABLED=0; START="22:00"; END="07:00"; MODE="dim"; NIGHT_LEVEL=20; DAY_LEVEL=100; METHOD="overlay"
 LAST=""
+WARNED=0
 
 to_min() { local h=${1%%:*} m=${1##*:}; echo $(( 10#$h * 60 + 10#$m )); }
 
 echo "wallmox-screen: controlling $BL (max $MAX), asking $URL every ${INTERVAL}s"
 while true; do
   query="format=env"; [[ -n "$KEY" ]] && query="$query&key=$KEY"
-  if resp="$(curl -fsS --max-time 10 "$URL/api/night?$query")"; then
+  # -L follows a redirect (e.g. http -> https behind a reverse proxy)
+  if resp="$(curl -fsSL --max-time 10 "$URL/api/night?$query")" && grep -q '^METHOD=' <<< "$resp"; then
+    [[ "$WARNED" == "1" ]] && echo "schedule received again from $URL"
+    WARNED=0
     while IFS='=' read -r k v; do
       case "$k" in
         ENABLED) ENABLED="$v" ;; START) START="$v" ;; END) END="$v" ;; MODE) MODE="$v" ;;
         NIGHT_LEVEL) NIGHT_LEVEL="$v" ;; DAY_LEVEL) DAY_LEVEL="$v" ;; METHOD) METHOD="$v" ;;
       esac
     done <<< "$resp"
+  elif [[ "$WARNED" != "1" ]]; then
+    echo "no schedule from $URL/api/night (wrong address or status page key?), keeping the last one" >&2
+    WARNED=1
   fi
 
   level="$DAY_LEVEL"
