@@ -96,6 +96,14 @@ turn off. The tablet's own clock decides, so the night may cross midnight.
   sudo WALLMOX_URL=https://wallmox.example.com bash -c "$(curl -fsSL https://raw.githubusercontent.com/krajcara/wallmox/main/tablet/install.sh)"
   ```
 
+### Tablet battery and WiFi
+
+The screen helper also reports the tablet's battery, charger and WiFi signal.
+The status page shows them next to the clock, and the admin panel lists every
+tablet under **Tablets**, with a warning when one runs on battery or goes
+silent. Turn on **Wallmox is behind a reverse proxy** if you use one, so
+Wallmox can tell tablets apart by their address.
+
 ## Try it without Proxmox
 
 ```bash

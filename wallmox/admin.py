@@ -160,6 +160,42 @@ def agent_rows(c, S):
     return rows
 
 
+def tablet_rows(S):
+    from .ui import fmt_age
+    rows, warnings = [], []
+    for t in current_app.extensions["wallmox_tablets"].all():
+        age = fmt_age(t["age"])
+        if t["battery"] is None:
+            battery = "–"
+        elif t["plugged"] is False:
+            battery = f"{t['battery']}% {S['t_on_battery']}"
+        elif t["bat_status"] == "Charging":
+            battery = f"{t['battery']}%, {S['t_charging']}"
+        elif t["bat_status"] == "Full":
+            battery = f"{t['battery']}%, {S['t_full']}"
+        else:
+            battery = f"{t['battery']}%, {S['t_plugged']}"
+        if t["bat_temp"] is not None:
+            battery += f", {t['bat_temp']:.0f} °C"
+        wifi = "–"
+        if t["signal"] is not None:
+            wifi = f"{t['signal']} dBm"
+        elif t["link"] is not None:
+            wifi = f"{t['link']}/70"
+        if t["bars"] is not None:
+            wifi += f" ({t['bars']}/4)"
+        state = "error" if (t["stale"] or t["plugged"] is False) else "ok"
+        rows.append({"name": t["name"], "ip": t["ip"], "battery": battery, "wifi": wifi,
+                     "seen": S["t_ago"].format(age=age), "state": state})
+        if t["stale"]:
+            warnings.append(S["t_warn_silent"].format(name=t["name"], age=age))
+        elif t["plugged"] is False:
+            warnings.append(S["t_warn_battery"].format(name=t["name"], pct=t["battery"]))
+        if not t["stale"] and t["bat_temp"] is not None and t["bat_temp"] >= 45:
+            warnings.append(S["t_warn_hot"].format(name=t["name"], t=round(t["bat_temp"])))
+    return rows, warnings
+
+
 def status_url(external=True):
     args = {"key": cfg().status_key} if cfg().status_key else {}
     return url_for("status", _external=external, **args)
@@ -213,6 +249,7 @@ def settings():
     c = cfg()
     nodes, storages = known_names()
     updates().check_in_background()
+    tablets, tablet_warnings = tablet_rows(g.S)
     return render_template(
         "admin/settings.html", S=g.S, cfg=c, version=__version__,
         languages=[(code, LANGUAGE_NAMES[code]) for code in LANGUAGES],
@@ -221,6 +258,7 @@ def settings():
         agent_cmd=agent_command(c), agents=agent_rows(c, g.S),
         upd=updates().info(), upd_state=updates().state(),
         screen_cmd=screen_command(c),
+        tablets=tablets, tablet_warnings=tablet_warnings,
         settings_file=settings_path(c))
 
 

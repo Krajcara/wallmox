@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Wallmox screen helper: sets the tablet's backlight by the night mode schedule
-# from the Wallmox admin panel. For Linux kiosk tablets with /sys/class/backlight.
+# Wallmox screen helper for Linux kiosk tablets:
+#  - sets the backlight by the night mode schedule from the Wallmox admin panel
+#  - reports the tablet's battery, charger and WiFi signal to Wallmox
 # Settings: /etc/wallmox-screen.conf (URL=..., KEY=..., DEVICE=..., INTERVAL=...)
+HELPER_VERSION="0.6.0"
 set -u
 
 CONF="${WALLMOX_SCREEN_CONF:-/etc/wallmox-screen.conf}"
 BL_DIR="${WALLMOX_BACKLIGHT_DIR:-/sys/class/backlight}"   # overridable for tests
+PS_DIR="${WALLMOX_POWER_DIR:-/sys/class/power_supply}"
+WIRELESS="${WALLMOX_WIRELESS_FILE:-/proc/net/wireless}"
 URL=""; KEY=""; DEVICE=""; INTERVAL=60
 while IFS='=' read -r k v; do
   case "$k" in
@@ -29,11 +33,44 @@ WARNED=0
 
 to_min() { local h=${1%%:*} m=${1##*:}; echo $(( 10#$h * 60 + 10#$m )); }
 
+# Tablet status -> curl form fields (REPORT array)
+collect_status() {
+  local ps type bat="" bstat="" btemp="" mains="" iface="" link="" level=""
+  for ps in "$PS_DIR"/*; do
+    [[ -r "$ps/type" ]] || continue
+    read -r type < "$ps/type" || continue
+    case "$type" in
+      Battery)
+        if [[ -z "$bat" ]]; then
+          read -r bat < "$ps/capacity" 2>/dev/null || bat=""
+          read -r bstat < "$ps/status" 2>/dev/null || bstat=""
+          read -r btemp < "$ps/temp" 2>/dev/null || btemp=""
+        fi ;;
+      Mains|USB*)
+        local online=""
+        read -r online < "$ps/online" 2>/dev/null || online=""
+        if [[ "$online" == "1" ]]; then mains=1; elif [[ -z "$mains" ]]; then mains=0; fi ;;
+    esac
+  done
+  # /proc/net/wireless: "wlan0: 0000   58.  -52.  -256 ..."
+  if [[ -r "$WIRELESS" ]]; then
+    read -r iface _ link level _ < <(awk -F'[: ]+' 'NR>2 {sub(/^ +/, ""); print}' "$WIRELESS" | head -n1)
+  fi
+  REPORT=(--data-urlencode "host=$(hostname)" --data-urlencode "v=$HELPER_VERSION"
+          --data-urlencode "battery=$bat" --data-urlencode "bat_status=$bstat"
+          --data-urlencode "bat_temp=$btemp" --data-urlencode "mains=$mains"
+          --data-urlencode "wifi=${iface%:}" --data-urlencode "link=${link%.}"
+          --data-urlencode "signal=${level%.}")
+}
+
 echo "wallmox-screen: controlling $BL (max $MAX), asking $URL every ${INTERVAL}s"
 while true; do
   query="format=env"; [[ -n "$KEY" ]] && query="$query&key=$KEY"
   # -L follows a redirect (e.g. http -> https behind a reverse proxy)
-  if resp="$(curl -fsSL --max-time 10 "$URL/api/night?$query")" && grep -q '^METHOD=' <<< "$resp"; then
+  # POST = report the tablet's status and get the schedule back in one request
+  collect_status
+  if resp="$(curl -fsSL --post301 --post302 --post303 --max-time 10 "${REPORT[@]}" \
+               "$URL/api/night?$query")" && grep -q '^METHOD=' <<< "$resp"; then
     [[ "$WARNED" == "1" ]] && echo "schedule received again from $URL"
     WARNED=0
     while IFS='=' read -r k v; do

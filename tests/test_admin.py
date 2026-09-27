@@ -216,3 +216,16 @@ def test_night_mode(env):
     assert 'id="night-config"' in frag and 'data-enabled="0"' in frag
     c.post("/admin/save/night", data=dict(base, method="overlay"))
     assert 'data-enabled="1"' in c.get("/status/fragment").get_data(as_text=True)
+
+
+def test_tablet_reports(env):
+    app, cfg, _ = env
+    c = app.test_client()
+    r = c.post("/api/night?format=env", data={"host": "wallmox-tablet", "battery": "64",
+               "bat_status": "Discharging", "mains": "0", "signal": "-71", "v": "0.6.0"})
+    assert "METHOD=" in r.get_data(as_text=True)
+    frag = c.get("/status/fragment").get_data(as_text=True)       # same IP as the report
+    assert "tb-bat tb-crit" in frag and "64%" in frag and "tb-wifi tb-warn" in frag
+    login(c)
+    html = c.get("/admin/").get_data(as_text=True)
+    assert "wallmox-tablet" in html and "running on battery (64%)" in html

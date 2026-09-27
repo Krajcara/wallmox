@@ -106,9 +106,15 @@
   // Copy buttons.
   document.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const input = document.getElementById(btn.dataset.copy);
-      try { await navigator.clipboard.writeText(input.value); }
-      catch { input.select(); document.execCommand("copy"); }
+      const el = document.getElementById(btn.dataset.copy);
+      const text = "value" in el ? el.value : el.textContent;   // <input> or <pre>
+      try { await navigator.clipboard.writeText(text); }
+      catch {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+        document.execCommand("copy");
+      }
       const old = btn.textContent;
       btn.textContent = btn.dataset.done;
       setTimeout(() => { btn.textContent = old; }, 1200);

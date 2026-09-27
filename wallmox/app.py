@@ -17,6 +17,7 @@ from .poller import Poller
 from .proxmox import ProxmoxClient, collect
 from .temps import add_temps
 from .updates import UpdateChecker
+from .tablets import Tablets
 from .ui import build_view
 
 log = logging.getLogger(__name__)
@@ -87,6 +88,8 @@ def create_app(cfg, start_poller: bool = True) -> Flask:
     app.extensions["wallmox_poller"] = poller
     app.extensions["wallmox_make_source"] = make_source
     app.extensions["wallmox_updates"] = UpdateChecker(cfg.data_dir)
+    tablets = Tablets()
+    app.extensions["wallmox_tablets"] = tablets
     if start_poller:
         poller.start()
 
@@ -108,6 +111,7 @@ def create_app(cfg, start_poller: bool = True) -> Flask:
     def context():
         view = build_view(poller.state(), cfg, g.S)
         return {"view": view, "S": g.S, "cfg": cfg, "version": __version__,
+                "tablet": tablets.for_ip(request.remote_addr or ""),
                 "fragment_url": url_for("status_fragment", **key_args())}
 
     @app.after_request
@@ -140,10 +144,14 @@ def create_app(cfg, start_poller: bool = True) -> Flask:
         return jsonify({"version": __version__, "snapshot": st["snapshot"],
                         "error": st["error"], "last_ok": st["last_ok"]})
 
-    @app.route("/api/night")
+    @app.route("/api/night", methods=["GET", "POST"])
     def api_night():
-        """Night mode schedule for the tablet's screen helper."""
+        """Night mode schedule for the tablet's screen helper.
+
+        The helper POSTs its battery / charger / WiFi status and gets the schedule back."""
         check_key()
+        if request.method == "POST":
+            tablets.report(request.form, request.remote_addr or "")
         nm = cfg.night
         data = {"enabled": nm.enabled, "start": nm.start, "end": nm.end, "mode": nm.mode,
                 "night_level": nm.dim_level, "day_level": nm.day_level, "method": nm.method}

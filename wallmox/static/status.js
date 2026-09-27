@@ -79,6 +79,45 @@
   nightEl.addEventListener('click', wake, false);
   nightEl.addEventListener('touchstart', wake, false);
 
+  /* Battery and WiFi of this tablet: sent by its screen helper, rendered by the
+     server into #tablet-src; without a helper, use the browser's battery info. */
+  var tabletSlot = document.getElementById('tablet');
+  var browserBattery = null;
+
+  function batteryHtml(pct, charging) {
+    var level = (!charging || pct < 20) ? 'crit' : 'ok';
+    return '<span class="tb tb-bat tb-' + level + '"><svg viewBox="0 0 28 14" aria-hidden="true">' +
+      '<rect class="bat-body" x="0.8" y="0.8" width="23.4" height="12.4" rx="2.6"/>' +
+      '<rect class="bat-nub" x="25" y="4.6" width="2.3" height="4.8" rx="1"/>' +
+      '<rect class="bat-fill" x="2.6" y="2.6" width="' + (pct * 19.8 / 100).toFixed(1) + '" height="8.8" rx="1.2"/>' +
+      (charging ? '<path class="bat-bolt" d="M13.8 1.6 8.6 7.9h3.6l-1.5 4.5 5.3-6.4h-3.6z"/>' : '') +
+      '</svg><span class="tb-text">' + pct + '%' +
+      (charging ? '' : ' ' + (body.getAttribute('data-on-battery') || '')) + '</span></span>';
+  }
+
+  function showTablet() {
+    var src = document.getElementById('tablet-src');
+    var html = src ? src.innerHTML.replace(/^\s+|\s+$/g, '') : '';
+    /* Browsers without battery information report "100%, charging, fully charged"; skip that. */
+    var fake = browserBattery && browserBattery.level === 1 && browserBattery.charging &&
+               browserBattery.chargingTime === 0;
+    if (!html && browserBattery && !fake) {
+      html = batteryHtml(Math.round(browserBattery.level * 100), browserBattery.charging);
+    }
+    if (tabletSlot.innerHTML !== html) { tabletSlot.innerHTML = html; }
+  }
+
+  if (navigator.getBattery) {
+    try {
+      navigator.getBattery().then(function (bat) {
+        browserBattery = bat;
+        bat.addEventListener('chargingchange', showTablet, false);
+        bat.addEventListener('levelchange', showTablet, false);
+        showTablet();
+      });
+    } catch (e) { /* not available */ }
+  }
+
   function setConnected(ok) {
     conn.className = ok ? 'conn is-hidden' : 'conn';
   }
@@ -96,6 +135,7 @@
       if (xhr.status === 200) {
         dash.innerHTML = xhr.responseText;
         applyNight();
+        showTablet();
         failures = 0;
         setConnected(true);
       } else {

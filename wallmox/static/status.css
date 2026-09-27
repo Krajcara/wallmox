@@ -66,7 +66,32 @@ h2, p, ul { margin: 0; padding: 0; }
   background: #ec5f53; color: #1c2630; font-weight: 600; font-size: 0.85rem;
 }
 .conn.is-hidden { display: none; }
-.clock { display: -webkit-flex; display: flex; -webkit-align-items: baseline; align-items: baseline; }
+.clock { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+.clock .date { -webkit-align-self: baseline; align-self: baseline; margin-top: 0.35rem; }
+
+/* Tablet battery and WiFi */
+.tablet-status { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+.tb { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; margin-right: 0.9rem; color: #8796a5; font-size: 0.95rem; }
+.tb svg { display: block; }
+.tb-wifi svg { width: 1.25rem; height: 1rem; }
+.tb-wifi circle.on { fill: #b9c3cc; }
+.tb-wifi path { fill: none; stroke-width: 1.9; stroke-linecap: round; }
+.tb-wifi path.on { stroke: #b9c3cc; }
+.tb-wifi circle.off { fill: #34434f; }
+.tb-wifi path.off { stroke: #34434f; }
+.tb-wifi.tb-warn circle.on { fill: #efb440; } .tb-wifi.tb-warn path.on { stroke: #efb440; }
+.tb-wifi.tb-crit circle.on { fill: #ec5f53; } .tb-wifi.tb-crit path.on { stroke: #ec5f53; }
+.tb-bat svg { width: 1.7rem; height: 0.85rem; margin-right: 0.35rem; }
+.bat-body { fill: none; stroke: #8796a5; stroke-width: 1.4; }
+.bat-nub { fill: #8796a5; }
+.bat-fill { fill: #b9c3cc; }
+.bat-bolt { fill: #1c2630; stroke: #1c2630; stroke-width: 0.6; }
+.tb-bat.tb-ok .bat-fill { fill: #5cc48d; }
+.tb-crit .bat-fill { fill: #ec5f53; }
+.tb-crit .bat-body { stroke: #ec5f53; }
+.tb-crit .bat-nub { fill: #ec5f53; }
+.tb-crit .tb-text { color: #ec5f53; font-weight: 600; }
+.tb-warn .tb-text { color: #efb440; font-weight: 600; }
 .date { color: #8796a5; margin-right: 0.7rem; font-size: 1rem; }
 .time { font-weight: 600; font-size: 1.6rem; line-height: 1; }
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.0
+
+- Battery and WiFi on the tablet. The screen helper reports the tablet's
+  battery level, charger, battery temperature and WiFi signal every minute.
+  The status page shows WiFi and battery icons next to the clock; the battery
+  turns red with "on battery" when the charger is unplugged, and a warning
+  appears when the battery gets warm.
+- Admin panel: new Tablets section with every tablet's battery, WiFi and last
+  report, plus warnings at the top when a tablet runs on battery or stops
+  reporting.
+- Android tablets without the helper show the battery from the browser, where
+  the browser supports it.
+- Fixed: the Copy buttons for commands copied nothing.
+
 ## 0.5.1
 
 - Screen helper: follows redirects (e.g. http to https behind a reverse proxy),

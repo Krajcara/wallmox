@@ -1,0 +1,28 @@
+{#- Battery and WiFi of the tablet that is looking at the page (from its screen helper). -#}
+{% if tablet %}
+{% set b = tablet.battery %}
+{% if tablet.plugged is sameas false or (b is not none and b < 20) %}{% set blv = 'crit' %}{% else %}{% set blv = 'ok' %}{% endif %}
+{% if tablet.bat_temp is not none and tablet.bat_temp >= 55 %}{% set tlv = 'crit' %}{% elif tablet.bat_temp is not none and tablet.bat_temp >= 45 %}{% set tlv = 'warn' %}{% else %}{% set tlv = '' %}{% endif %}
+{% if tablet.bars is not none %}
+<span class="tb tb-wifi tb-{{ 'crit' if tablet.bars <= 1 else ('warn' if tablet.bars == 2 else 'ok') }}" title="WiFi {{ tablet.signal if tablet.signal is not none else '' }} dBm">
+  <svg viewBox="0 0 20 16" aria-hidden="true">
+    <circle class="{{ 'on' if tablet.bars >= 1 else 'off' }}" cx="10" cy="13.4" r="1.7"/>
+    <path class="{{ 'on' if tablet.bars >= 2 else 'off' }}" d="M6.6 10.3a4.8 4.8 0 0 1 6.8 0"/>
+    <path class="{{ 'on' if tablet.bars >= 3 else 'off' }}" d="M3.9 7.5a8.6 8.6 0 0 1 12.2 0"/>
+    <path class="{{ 'on' if tablet.bars >= 4 else 'off' }}" d="M1.2 4.7a12.5 12.5 0 0 1 17.6 0"/>
+  </svg>
+</span>
+{% endif %}
+{% if b is not none %}
+<span class="tb tb-bat tb-{{ blv }}" title="{{ tablet.bat_status }}">
+  <svg viewBox="0 0 28 14" aria-hidden="true">
+    <rect class="bat-body" x="0.8" y="0.8" width="23.4" height="12.4" rx="2.6"/>
+    <rect class="bat-nub" x="25" y="4.6" width="2.3" height="4.8" rx="1"/>
+    <rect class="bat-fill" x="2.6" y="2.6" width="{{ '%.1f' % (b * 19.8 / 100) }}" height="8.8" rx="1.2"/>
+    {% if tablet.plugged %}<path class="bat-bolt" d="M13.8 1.6 8.6 7.9h3.6l-1.5 4.5 5.3-6.4h-3.6z"/>{% endif %}
+  </svg>
+  <span class="tb-text">{{ b }}%{% if tablet.plugged is sameas false %} {{ S.on_battery }}{% endif %}</span>
+</span>
+{% if tlv %}<span class="tb tb-{{ tlv }}"><span class="tb-text">{{ S.battery_hot.format(t=tablet.bat_temp|round|int) }}</span></span>{% endif %}
+{% endif %}
+{% endif %}

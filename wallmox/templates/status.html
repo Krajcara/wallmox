@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='status.css') }}?v={{ version }}">
 <noscript><meta http-equiv="refresh" content="{{ cfg.refresh_interval }}"></noscript>
 </head>
-<body data-refresh="{{ cfg.refresh_interval }}" data-fragment-url="{{ fragment_url }}" data-days="{{ S.days }}">
+<body data-refresh="{{ cfg.refresh_interval }}" data-fragment-url="{{ fragment_url }}" data-days="{{ S.days }}" data-on-battery="{{ S.on_battery }}">
 <header class="topbar">
   <div class="brand">
     <svg class="logo" viewBox="0 0 28 20" aria-hidden="true">
@@ -21,7 +21,10 @@
     <span class="brand-name">{{ cfg.title }}</span>
     <span id="conn" class="conn" hidden>{{ S.connection_lost }}</span>
   </div>
-  <div class="clock"><span id="date" class="date"></span><span id="clock" class="time">--:--</span></div>
+  <div class="clock">
+    <span id="tablet" class="tablet-status">{% include "_tablet.html" %}</span>
+    <span id="date" class="date"></span><span id="clock" class="time">--:--</span>
+  </div>
 </header>
 <main id="dash">
 {% include "_dashboard.html" %}

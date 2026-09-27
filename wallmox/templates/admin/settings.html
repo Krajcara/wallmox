@@ -23,6 +23,7 @@
     <a href="#display">{{ S.sec_display }}</a>
     <a href="#temps">{{ S.sec_temps }}</a>
     <a href="#night">{{ S.sec_night }}</a>
+    <a href="#tablets">{{ S.sec_tablets }}</a>
     <a href="#thresholds">{{ S.sec_thresholds }}</a>
     <a href="#proxmox">{{ S.sec_proxmox }}</a>
     <a href="#security">{{ S.sec_security }}</a>
@@ -46,6 +47,7 @@
       {% endfor %}
     {% endwith %}
     {% if cfg.demo %}<p class="msg msg-warn">{{ S.demo_mode }}</p>{% endif %}
+    {% for w in tablet_warnings %}<p class="msg msg-error"><a href="#tablets">{{ w }}</a></p>{% endfor %}
 
     <section class="panel" id="general">
       <h2>{{ S.sec_general }}</h2>
@@ -196,6 +198,32 @@
         </div>
         <div class="actions"><button class="btn btn-primary" type="submit">{{ S.save }}</button></div>
       </form>
+    </section>
+
+    <section class="panel" id="tablets">
+      <h2>{{ S.sec_tablets }}</h2>
+      {% if tablets %}
+      <table class="agents">
+        <thead><tr><th>{{ S.t_col_name }}</th><th>{{ S.t_col_battery }}</th><th>{{ S.t_col_wifi }}</th><th>{{ S.t_col_seen }}</th></tr></thead>
+        <tbody>
+        {% for t in tablets %}
+          <tr>
+            <th scope="row">{{ t.name }}<small class="field-hint">{{ t.ip }}</small></th>
+            <td><span class="agent-state agent-{{ t.state }}">{{ t.battery }}</span></td>
+            <td>{{ t.wifi }}</td>
+            <td class="muted">{{ t.seen }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <p class="field-hint">{{ S.t_note }}</p>
+      {% else %}
+      <p>{{ S.t_none }}</p>
+      <div class="copy copy-cmd">
+        <pre class="cmd" id="screen-cmd-2">{{ screen_cmd }}</pre>
+        <button class="btn" type="button" data-copy="screen-cmd-2" data-done="{{ S.copied }}">{{ S.copy_btn }}</button>
+      </div>
+      {% endif %}
     </section>
 
     <section class="panel" id="thresholds">
