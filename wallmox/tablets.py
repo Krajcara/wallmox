@@ -4,6 +4,7 @@ import threading
 import time
 
 STALE_AFTER = 5 * 60   # seconds without a report before a tablet counts as silent
+HINT_SECONDS = 6       # how long the power button message stays on the screen
 
 
 def _int(value):
@@ -29,6 +30,7 @@ class Tablets:
     def __init__(self):
         self._lock = threading.Lock()
         self._by_name = {}
+        self._hints = {}      # ip -> power button message
 
     def report(self, form, ip: str) -> None:
         battery = _int(form.get("battery"))
@@ -57,6 +59,26 @@ class Tablets:
         }
         with self._lock:
             self._by_name[name] = entry
+
+    def event(self, form, ip: str) -> None:
+        """Power button events from the tablet's power guard."""
+        kind = form.get("event", "")
+        if kind not in ("power_short", "power_off"):
+            return
+        try:
+            hold = max(1, min(15, int(float(form.get("hold", 3)))))
+        except ValueError:
+            hold = 3
+        with self._lock:
+            self._hints[ip] = {"hint": kind, "hold": hold, "until": time.time() + HINT_SECONDS
+                               if kind == "power_short" else time.time() + 120}
+
+    def hint(self, ip: str) -> dict:
+        with self._lock:
+            h = self._hints.get(ip)
+        if not h or h["until"] < time.time():
+            return {"hint": "", "hold": 0}
+        return {"hint": h["hint"], "hold": h["hold"]}
 
     def all(self) -> list:
         now = time.time()

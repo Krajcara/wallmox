@@ -118,6 +118,48 @@
     } catch (e) { /* not available */ }
   }
 
+  /* Power button message. The tablet's power guard tells Wallmox about a short
+     press; the page asks for it every 2 s while this tablet has a helper. */
+  var hintEl = document.getElementById('hint');
+  var hintText = document.getElementById('hint-text');
+  var hintUrl = body.getAttribute('data-hint-url');
+  var hintTimer = null;
+
+  function showHint(kind, hold) {
+    var text = kind === 'power_off' ? body.getAttribute('data-power-off')
+                                    : body.getAttribute(hold >= 5 ? 'data-power-hint-many' : 'data-power-hint')
+                                        .replace('{n}', hold || 3);
+    hintText.innerHTML = '';
+    hintText.appendChild(document.createTextNode(text));
+    hintEl.className = 'hint is-on';
+    wakeUntil = new Date().getTime() + 60 * 1000;     /* also lights up a darkened page */
+    applyNight();
+    clearTimeout(hintTimer);
+    if (kind !== 'power_off') {
+      hintTimer = setTimeout(function () { hintEl.className = 'hint'; }, 5000);
+    }
+  }
+
+  function pollHint() {
+    if (!tabletSlot.innerHTML) { return; }            /* no helper on this tablet */
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4 || xhr.status !== 200) { return; }
+      try {
+        var h = JSON.parse(xhr.responseText);
+        if (h.hint && hintEl.className !== 'hint is-on') { showHint(h.hint, h.hold); }
+      } catch (e) { /* ignore */ }
+    };
+    xhr.open('GET', hintUrl + (hintUrl.indexOf('?') === -1 ? '?' : '&') + '_=' + new Date().getTime(), true);
+    xhr.send();
+  }
+  setInterval(pollHint, 2000);
+
+  /* Some browsers see the power key themselves; answer at once there. */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Power') { showHint('power_short', 3); }
+  }, false);
+
   function setConnected(ok) {
     conn.className = ok ? 'conn is-hidden' : 'conn';
   }

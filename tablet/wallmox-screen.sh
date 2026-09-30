@@ -3,7 +3,7 @@
 #  - sets the backlight by the night mode schedule from the Wallmox admin panel
 #  - reports the tablet's battery, charger and WiFi signal to Wallmox
 # Settings: /etc/wallmox-screen.conf (URL=..., KEY=..., DEVICE=..., INTERVAL=...)
-HELPER_VERSION="0.6.0"
+HELPER_VERSION="0.7.0"
 set -u
 
 CONF="${WALLMOX_SCREEN_CONF:-/etc/wallmox-screen.conf}"

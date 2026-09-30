@@ -261,3 +261,17 @@ body { display: -webkit-flex; display: flex; -webkit-flex-direction: column; fle
   -webkit-transition: opacity 1.5s ease; transition: opacity 1.5s ease;
 }
 .night.is-on { display: block; }
+
+/* Power button message */
+.hint {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 110;
+  background: rgba(10, 14, 18, 0.72);
+  -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
+}
+.hint.is-on { display: -webkit-flex; display: flex; }
+.hint-box {
+  max-width: 34rem; margin: 1rem; padding: 1.6rem 2rem; border-radius: 10px;
+  background: #222e3a; border-top: 3px solid #efb440; text-align: center;
+}
+.hint-box svg { width: 2.6rem; height: 2.6rem; fill: none; stroke: #efb440; stroke-width: 2.2; stroke-linecap: round; }
+.hint-box p { margin: 0.7rem 0 0; font-size: 1.6rem; font-weight: 600; line-height: 1.25; }

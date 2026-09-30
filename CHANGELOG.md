@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0
+
+- Power button guard for Linux kiosk tablets. A short press no longer shuts the
+  tablet down; the screen shows "hold the power button for 3 seconds to turn the
+  tablet off" (and lights up if night mode had darkened it). Holding the button
+  for 3 seconds turns the tablet off. Installed together with the screen helper;
+  `WALLMOX_POWER_HOLD` changes the time, `WALLMOX_POWER_BUTTON=0` leaves the
+  button alone.
+
 ## 0.6.0
 
 - Battery and WiFi on the tablet. The screen helper reports the tablet's

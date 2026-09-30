@@ -111,6 +111,7 @@ def create_app(cfg, start_poller: bool = True) -> Flask:
     def context():
         view = build_view(poller.state(), cfg, g.S)
         return {"view": view, "S": g.S, "cfg": cfg, "version": __version__,
+                "hint_url": url_for("api_tablet_hint", **key_args()),
                 "tablet": tablets.for_ip(request.remote_addr or ""),
                 "fragment_url": url_for("status_fragment", **key_args())}
 
@@ -159,6 +160,17 @@ def create_app(cfg, start_poller: bool = True) -> Flask:
             lines = [f"{k.upper()}={int(v) if isinstance(v, bool) else v}" for k, v in data.items()]
             return app.response_class("\n".join(lines) + "\n", mimetype="text/plain")
         return jsonify(data)
+
+    @app.route("/api/tablet-event", methods=["POST"])
+    def api_tablet_event():
+        check_key()
+        tablets.event(request.form, request.remote_addr or "")
+        return jsonify({"ok": True})
+
+    @app.route("/api/tablet-hint")
+    def api_tablet_hint():
+        check_key()
+        return jsonify(tablets.hint(request.remote_addr or ""))
 
     @app.route("/healthz")
     def healthz():

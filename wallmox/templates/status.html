@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='status.css') }}?v={{ version }}">
 <noscript><meta http-equiv="refresh" content="{{ cfg.refresh_interval }}"></noscript>
 </head>
-<body data-refresh="{{ cfg.refresh_interval }}" data-fragment-url="{{ fragment_url }}" data-days="{{ S.days }}" data-on-battery="{{ S.on_battery }}">
+<body data-refresh="{{ cfg.refresh_interval }}" data-fragment-url="{{ fragment_url }}" data-days="{{ S.days }}" data-on-battery="{{ S.on_battery }}" data-hint-url="{{ hint_url }}" data-power-hint="{{ S.power_hint }}" data-power-hint-many="{{ S.power_hint_many }}" data-power-off="{{ S.power_off }}">
 <header class="topbar">
   <div class="brand">
     <svg class="logo" viewBox="0 0 28 20" aria-hidden="true">
@@ -30,6 +30,10 @@
 {% include "_dashboard.html" %}
 </main>
 <div id="night" class="night"></div>
+<div id="hint" class="hint"><div class="hint-box">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+  <p id="hint-text"></p>
+</div></div>
 <script src="{{ url_for('static', filename='status.js') }}?v={{ version }}"></script>
 </body>
 </html>

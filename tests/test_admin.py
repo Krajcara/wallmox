@@ -229,3 +229,15 @@ def test_tablet_reports(env):
     login(c)
     html = c.get("/admin/").get_data(as_text=True)
     assert "wallmox-tablet" in html and "running on battery (64%)" in html
+
+
+def test_power_button_hint(env):
+    app, _, _ = env
+    c = app.test_client()
+    assert c.get("/api/tablet-hint").get_json()["hint"] == ""
+    c.post("/api/tablet-event", data={"host": "t", "event": "power_short", "hold": "3"})
+    assert c.get("/api/tablet-hint").get_json() == {"hint": "power_short", "hold": 3}
+    c.post("/api/tablet-event", data={"event": "reboot-everything"})      # unknown: ignored
+    assert c.get("/api/tablet-hint").get_json()["hint"] == "power_short"
+    html = c.get("/status").get_data(as_text=True)
+    assert 'id="hint"' in html and "data-hint-url=" in html

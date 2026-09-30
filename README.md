@@ -104,6 +104,14 @@ tablet under **Tablets**, with a warning when one runs on battery or goes
 silent. Turn on **Wallmox is behind a reverse proxy** if you use one, so
 Wallmox can tell tablets apart by their address.
 
+### Power button
+
+With the screen helper installed, a short press of the tablet's power button no
+longer shuts it down: the screen shows how to turn it off instead. Hold the
+button for 3 seconds to power off. Put `WALLMOX_POWER_HOLD=5` in front of the
+helper's install command for a different time, or `WALLMOX_POWER_BUTTON=0` to
+keep the normal behaviour.
+
 ## Try it without Proxmox
 
 ```bash
